@@ -1,0 +1,5 @@
+#id	tipo	status	texto
+A-001	A	confirmada	Langfuse self-host no compose, banco dedicado.
+A-002	A	confirmada	Tracing no graph RAG classico /messages.
+A-003	A	confirmada	Habilitavel via env LANGFUSE_ENABLED; off nos testes.
+A-004	A	confirmada	Callback via langfuse.langchain.CallbackHandler.

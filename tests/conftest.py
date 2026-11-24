@@ -22,6 +22,8 @@ def _jwt_secret(monkeypatch):
     monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-teste")
     monkeypatch.setenv("ALLOWED_MODELS", "azure/gpt-5-mini,azure/gpt-6-luna")
+    # observabilidade Langfuse desligada por padrão nos testes (determinístico)
+    monkeypatch.setenv("LANGFUSE_ENABLED", "false")
 
 
 @pytest.fixture(autouse=True)

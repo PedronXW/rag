@@ -1,0 +1,5 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-002	O docker-compose tem um servico langfuse (self-host) com banco dedicado	T-SPEC
+AC-002	U-001	get_langfuse_handler() retorna o handler de callback do Langfuse quando habilitado; graph_config() injeta callbacks no config	T-SPEC
+AC-003	U-003	Com LANGFUSE_ENABLED desabilitado, o handler e None e o graph roda sem callbacks (testes deterministicos intactos)	T-SPEC
+AC-004	U-001	O endpoint /messages passa callbacks ao invocar o graph quando o Langfuse esta habilitado	T-SPEC

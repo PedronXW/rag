@@ -154,6 +154,9 @@ class RagService:
                 yield ev
 
     async def _astream_events(self, graph, question, history, chat_id) -> AsyncIterator[dict]:
+        from einstein_test.services.rag.callbacks import graph_config
+
+        config = graph_config(chat_id=chat_id)
         async for mode, payload in graph.astream(
             {
                 "question": question,
@@ -162,7 +165,7 @@ class RagService:
                 "messages": [HumanMessage(content=question)],
             },
             stream_mode=["updates", "custom"],
-            config={"configurable": {"thread_id": str(chat_id)}},
+            config=config,
         ):
             if mode == "updates":
                 for node, update in payload.items():

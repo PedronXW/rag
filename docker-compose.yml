@@ -56,6 +56,29 @@ services:
     networks:
       - infra-net
 
+  langfuse:
+    image: langfuse/langfuse:4
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://einstein:einstein@postgres:5432/langfuse
+      DIRECT_URL: postgresql://einstein:einstein@postgres:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-local-secret}
+      SALT: ${LANGFUSE_SALT:-local-salt}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      LANGFUSE_INIT_USER_EMAIL: admin@localhost
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_PASSWORD:-admin}
+      LANGFUSE_INIT_PROJECT_NAME: einstein-test
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-pk-local}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-sk-local}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - infra-net
+
   api:
     build: .
     command: ["sh", "-c", ".venv/bin/uvicorn einstein_test.main:create_app --host 0.0.0.0 --port 8000 --workers $${API_WORKERS:-1} --factory"]
