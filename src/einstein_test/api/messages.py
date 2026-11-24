@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import AsyncIterator
+from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -16,7 +17,7 @@ from einstein_test.repositories.chat import ChatRepositorySQLAlchemy
 from einstein_test.repositories.file import FileRepositorySQLAlchemy
 from einstein_test.repositories.message import MessageRepositorySQLAlchemy
 from einstein_test.repositories.user import UserRepositorySQLAlchemy
-from einstein_test.schemas.message import MessageCreate, MessageRead
+from einstein_test.schemas.message import HitlResume, MessageCreate, MessageRead
 from einstein_test.schemas.page import Page
 from einstein_test.services.chat import ChatNotFoundError, ChatService
 from einstein_test.services.file import FileService
@@ -281,6 +282,114 @@ async def create_agent_answer(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+def _hitl_checkpointer():
+    """Checkpointer do HITL cacheado por processo (resume encontra o estado)."""
+    if _is_postgres():
+        from einstein_test.services.rag.checkpointer import build_postgres_checkpointer
+
+        return build_postgres_checkpointer()
+    from langgraph.checkpoint.memory import MemorySaver
+
+    return _hitl_memory_saver()
+
+
+@lru_cache(maxsize=1)
+def _hitl_memory_saver():
+    from langgraph.checkpoint.memory import MemorySaver
+
+    return MemorySaver()
+
+
+@router.post("/chats/{chat_id}/agent/hitl")
+async def create_agent_hitl(
+    chat_id: int,
+    payload: MessageCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    try:
+        await run_in_threadpool(_ensure_chat_owned, session, chat_id, current_user.id)
+    except ChatNotFoundError:
+        raise HTTPException(status_code=404, detail="chat não encontrado") from None
+
+    from einstein_test.services.rag.hitl import build_hitl_graph, hitl_config
+
+    rag = _rag_service(session)
+    message_service = _message_service(session)
+    await run_in_threadpool(
+        message_service.create_message,
+        chat_id=chat_id,
+        content=payload.content,
+        role="user",
+    )
+    checkpointer = await run_in_threadpool(_hitl_checkpointer)
+    graph = build_hitl_graph(
+        llm=rag.llm,
+        retriever=VectorRepositorySQLAlchemy(session),
+        embedder=rag.embedder,
+        checkpointer=checkpointer,
+    )
+    cfg = hitl_config(chat_id)
+    await run_in_threadpool(
+        graph.invoke,
+        {"question": payload.content, "chat_id": chat_id},
+        cfg,
+    )
+    snapshot = await run_in_threadpool(graph.get_state, cfg)
+    interrupts = snapshot.interrupts
+    draft = ""
+    if interrupts:
+        draft = interrupts[0].value.get("draft", "")
+    return {"status": "pending", "chat_id": chat_id, "draft": draft}
+
+
+@router.post("/chats/{chat_id}/agent/hitl/resume")
+async def resume_agent_hitl(
+    chat_id: int,
+    payload: HitlResume,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    try:
+        await run_in_threadpool(_ensure_chat_owned, session, chat_id, current_user.id)
+    except ChatNotFoundError:
+        raise HTTPException(status_code=404, detail="chat não encontrado") from None
+
+    from langgraph.types import Command
+
+    from einstein_test.services.rag.hitl import build_hitl_graph, hitl_config
+
+    rag = _rag_service(session)
+    checkpointer = await run_in_threadpool(_hitl_checkpointer)
+    graph = build_hitl_graph(
+        llm=rag.llm,
+        retriever=VectorRepositorySQLAlchemy(session),
+        embedder=rag.embedder,
+        checkpointer=checkpointer,
+    )
+    cfg = hitl_config(chat_id)
+    snapshot = await run_in_threadpool(graph.get_state, cfg)
+    if not snapshot.interrupts:
+        raise HTTPException(status_code=409, detail="nenhuma revisão pendente para este chat")
+    resume_value = {"approved": payload.approved}
+    if not payload.approved:
+        resume_value["feedback"] = payload.feedback or "resposta insatisfatória"
+    out = await run_in_threadpool(
+        graph.invoke,
+        Command(resume=resume_value),
+        cfg,
+    )
+    answer = out.get("answer", "")
+    if answer:
+        await run_in_threadpool(
+            _message_service(session).create_message,
+            chat_id=chat_id,
+            content=answer,
+            role="assistant",
+        )
+    return {"status": "approved" if payload.approved else "regenerated", "answer": answer}
 
 
 @router.get("/chats/{chat_id}/messages", response_model=Page[MessageRead])

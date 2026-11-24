@@ -1,0 +1,7 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	Existe um graph com no review que usa interrupt() apos a geracao	T-SPEC
+AC-002	U-001	Invocar com thread_id sem resume retorna estado pendente (snapshot.next + interrupts) e NAO persiste a resposta	T-SPEC
+AC-003	U-002	Command(resume approved=True) retoma e entrega a resposta gerada, persistindo a message assistant	T-SPEC
+AC-004	U-002	Command(resume approved=False com feedback) refaz a geracao considerando o feedback	T-SPEC
+AC-005	U-003	O estado pendente persiste entre a invocacao pausada e o resume (mesmo thread_id)	T-SPEC
+AC-006	U-003	Rota POST /chats/{chat_id}/agent/hitl devolve estado pending (draft); /resume retoma	T-SPEC

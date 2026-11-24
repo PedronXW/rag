@@ -25,3 +25,7 @@ class MessageRead(BaseModel):
     content: str
     role: str | None = None
     created_at: datetime
+
+class HitlResume(BaseModel):
+    approved: bool
+    feedback: str | None = Field(default=None, max_length=4000)

@@ -1,0 +1,5 @@
+#id	tipo	status	texto
+A-001	A	confirmada	Interrupt após geracao.
+A-002	A	confirmada	Rota /agent/hitl + /resume.
+A-003	A	confirmada	Memoria via checkpointer com thread_id = chat_id, como G-001.
+A-004	A	confirmada	Resume aceita approved + feedback.
