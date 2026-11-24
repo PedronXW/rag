@@ -1,15 +1,17 @@
-"""Grafo LangGraph do RAG: retrieve -> generate (sync e async).
+"""Grafo LangGraph do RAG: retrieve -> generate, com MessagesState + memória.
 
-`compile_rag_graph(async_=...)` constrói um único grafo a partir de funções
-retrieve/generate parametrizadas — sem duplicar os nós entre as variantes
-sync e async. A variante async usa `asyncio.to_thread` no retrieve (embeddings
-e busca são síncronos).
+O graph usa `MessagesState` (histórico via `add_messages`) e reducers de
+substituição para `chunks`/`sources`. Pode ser compilado com um checkpointer
+(`PostgresSaver` em produção, `MemorySaver` nos testes) para memória de
+conversa por `thread_id = chat_id`.
 """
 
 import asyncio
-from typing import Any, TypedDict
+from operator import add
+from typing import Annotated, Any, TypedDict
 
-from langgraph.graph import StateGraph
+from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.graph import MessagesState, StateGraph
 
 from einstein_test.vector import Embedder
 from einstein_test.vector.repository import VectorRepository
@@ -18,13 +20,26 @@ CHUNKS_PER_FILE = 2
 MAX_CHUNKS = 12
 
 
-class RagState(TypedDict, total=False):
+class RagState(MessagesState):
+    """Estado do RAG: MessagesState (histórico) + campos do fluxo.
+
+    `chunks`/`sources` usam reducer de substituição (último valor vence) para
+    não acumular entre turnos com checkpointer; `messages` usa `add_messages`.
+    """
+
     question: str
     history: list[str]
     chat_id: int
-    chunks: list[Any]
+    chunks: Annotated[list[Any], lambda _old, new: new]
+    sources: Annotated[list[Any], lambda _old, new: new]
     prompt: str
     answer: str
+
+
+def _content_of(c: Any) -> str:
+    if isinstance(c, dict):
+        return c.get("content", "")
+    return getattr(c, "content", str(c))
 
 
 def build_prompt(
@@ -33,7 +48,7 @@ def build_prompt(
     history: list[str],
 ) -> str:
     """Monta o prompt: contexto (chunks) + histórico + pergunta."""
-    context = "\n".join(f"- {getattr(c, 'content', str(c))}" for c in chunks)
+    context = "\n".join(f"- {_content_of(c)}" for c in chunks)
     history_text = "\n".join(f"- {h}" for h in history)
     return (
         "Você responde perguntas sobre os arquivos de um chat. Responda com "
@@ -43,6 +58,21 @@ def build_prompt(
         f"<histórico>\n{history_text or '(vazio)'}\n</histórico>\n\n"
         f"Pergunta: {question}\nResposta:"
     )
+
+
+def _chunk_to_dict(c: Any) -> dict:
+    """Converte um chunk (objeto ou dict) em dict serializável para o estado."""
+    if isinstance(c, dict):
+        return {
+            "chunk_id": c.get("id") or c.get("chunk_id"),
+            "document_id": c.get("file_id") or c.get("document_id"),
+            "content": c.get("content", ""),
+        }
+    return {
+        "chunk_id": getattr(c, "id", None),
+        "document_id": getattr(c, "file_id", None),
+        "content": getattr(c, "content", str(c)),
+    }
 
 
 def _retrieve_chunks(
@@ -61,21 +91,25 @@ def _retrieve_chunks(
     )
 
 
+def _sources_from(chunks: list[Any]) -> list[dict]:
+    return [_chunk_to_dict(c) for c in chunks]
+
+
 def _compile(
     llm,
     retriever: VectorRepository,
     embedder: Embedder,
     *,
     async_: bool,
+    checkpointer=None,
 ) -> Any:
     """Compila o StateGraph retrieve -> generate (sync ou async)."""
 
     def _retrieve_sync(state):
-        return {
-            "chunks": _retrieve_chunks(
-                state["question"], state["chat_id"], retriever, embedder
-            )
-        }
+        chunks = _retrieve_chunks(
+            state["question"], state["chat_id"], retriever, embedder
+        )
+        return {"chunks": [_chunk_to_dict(c) for c in chunks], "sources": _sources_from(chunks)}
 
     async def _retrieve_async(state):
         chunks = await asyncio.to_thread(
@@ -85,27 +119,39 @@ def _compile(
             retriever,
             embedder,
         )
-        return {"chunks": chunks}
+        return {"chunks": [_chunk_to_dict(c) for c in chunks], "sources": _sources_from(chunks)}
 
     def _generate_sync(state, writer):
         chunks = state.get("chunks") or []
         history = state.get("history") or []
         prompt = build_prompt(state["question"], chunks, history)
+        messages = [HumanMessage(content=prompt)]
         pieces: list[str] = []
-        for token in llm.stream(prompt):
+        for token in llm.stream(messages):
             pieces.append(token)
             writer(token)
-        return {"prompt": prompt, "answer": "".join(pieces)}
+        answer = "".join(pieces)
+        return {
+            "prompt": prompt,
+            "answer": answer,
+            "messages": [AIMessage(content=answer)],
+        }
 
     async def _generate_async(state, writer):
         chunks = state.get("chunks") or []
         history = state.get("history") or []
         prompt = build_prompt(state["question"], chunks, history)
+        messages = [HumanMessage(content=prompt)]
         pieces: list[str] = []
-        async for token in llm.astream(prompt):
+        async for token in llm.astream(messages):
             pieces.append(token)
             writer(token)
-        return {"prompt": prompt, "answer": "".join(pieces)}
+        answer = "".join(pieces)
+        return {
+            "prompt": prompt,
+            "answer": answer,
+            "messages": [AIMessage(content=answer)],
+        }
 
     retrieve = _retrieve_async if async_ else _retrieve_sync
     generate = _generate_async if async_ else _generate_sync
@@ -116,14 +162,22 @@ def _compile(
     graph.set_entry_point("retrieve")
     graph.add_edge("retrieve", "generate")
     graph.set_finish_point("generate")
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)
 
 
 def compile_rag_graph(
     llm, retriever: VectorRepository, embedder: Embedder, *, async_: bool
 ) -> Any:
-    """Constrói o grafo RAG (sync ou async) sem duplicar os nós."""
+    """Constrói o grafo RAG (sync ou async) sem checkpointer (compat atual)."""
     return _compile(llm, retriever, embedder, async_=async_)
+
+
+def build_graph_with_state(
+    llm, retriever: VectorRepository, embedder: Embedder, *, async_: bool = False,
+    checkpointer=None,
+) -> Any:
+    """Monta o StateGraph com MessagesState + checkpointer opcional (G-001)."""
+    return _compile(llm, retriever, embedder, async_=async_, checkpointer=checkpointer)
 
 
 def build_graph(llm, retriever: VectorRepository, embedder: Embedder) -> Any:
@@ -144,4 +198,5 @@ __all__ = [
     "compile_rag_graph",
     "build_graph",
     "build_graph_async",
+    "build_graph_with_state",
 ]

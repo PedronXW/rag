@@ -74,7 +74,7 @@ def _post_message(client, headers, chat_id, content):
 
 
 def _message_id_from_sse(body: str) -> int:
-    m = re.search(r'data:\s*\{"message_id":\s*(\d+)\}', body)
+    m = re.search(r'data:\s*\{"message_id":\s*(\d+)', body)
     assert m, f"message_id não encontrado no SSE: {body[:200]}"
     return int(m.group(1))
 

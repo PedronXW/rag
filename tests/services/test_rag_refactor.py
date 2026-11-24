@@ -44,7 +44,7 @@ def test_ac003_no_duplicated_graph_build():
     source = inspect.getsource(graph)
     assert source.count("StateGraph(") == 1, "um único StateGraph"
     assert source.count("graph.add_node") == 2, "dois add_node (retrieve+generate) — uma vez"
-    assert source.count("graph.compile()") == 1, "um único compile"
+    assert source.count("graph.compile") == 1, "um único compile"
     assert "compile_rag_graph" in source, "construtor comum de grafo"
 
 

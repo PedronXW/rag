@@ -42,8 +42,8 @@ def allowed_models() -> list[str]:
 
 
 class ChatLLM(Protocol):
-    def stream(self, prompt: str) -> Iterator[str]: ...
-    def astream(self, prompt: str) -> AsyncIterator[str]: ...
+    def stream(self, messages) -> Iterator[str]: ...
+    def astream(self, messages) -> AsyncIterator[str]: ...
 
 
 class FakeChatLLM:
@@ -52,10 +52,10 @@ class FakeChatLLM:
     def __init__(self, tokens: list[str] | None = None) -> None:
         self.tokens = tokens or ["token1", "token2"]
 
-    def stream(self, prompt: str) -> Iterator[str]:
+    def stream(self, messages) -> Iterator[str]:
         yield from self.tokens
 
-    async def astream(self, prompt: str) -> AsyncIterator[str]:
+    async def astream(self, messages) -> AsyncIterator[str]:
         for token in self.tokens:
             yield token
 
@@ -83,6 +83,13 @@ def _retrying_sync() -> Retrying:
     )
 
 
+def _as_prompt(messages) -> str:
+    """Normaliza a entrada do LLM (str ou lista de BaseMessage) em prompt str."""
+    if isinstance(messages, str):
+        return messages
+    return "\n".join(getattr(m, "content", str(m)) for m in messages)
+
+
 class ChatOpenAIAdapter:
     """ChatLLM real via langchain-openai ChatOpenAI (azure/gpt-5-mini)."""
 
@@ -107,7 +114,8 @@ class ChatOpenAIAdapter:
             streaming=True,
         )
 
-    def stream(self, prompt: str) -> Iterator[str]:
+    def stream(self, messages) -> Iterator[str]:
+        prompt = _as_prompt(messages)
         # retry transiente na aquisição do 1º token (não depois)
         it = iter(self._llm.stream(prompt))
         while True:
@@ -128,7 +136,8 @@ class ChatOpenAIAdapter:
         for c in it:
             yield (c.content or "")
 
-    async def astream(self, prompt: str) -> AsyncIterator[str]:
+    async def astream(self, messages) -> AsyncIterator[str]:
+        prompt = _as_prompt(messages)
         # retry transiente apenas ANTES do primeiro token
         it: Any = None
         first: Any = None

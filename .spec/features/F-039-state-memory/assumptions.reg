@@ -1,0 +1,5 @@
+#id	tipo	status	texto
+A-001	A	confirmada	Contrato SSE muda: adiciona eventos por no e sources no [DONE].
+A-002	A	confirmada	Memoria via PostgresSaver com thread_id = chat_id.
+A-003	A	confirmada	Reducers completos: add_messages + substituicao de chunks/sources.
+A-004	A	confirmada	Preservar multi-tenant e o ChatLLM Protocol.

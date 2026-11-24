@@ -1,0 +1,8 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-002	RagState passa a usar MessagesState com canal messages via reducer add_messages; chunks/sources com reducer de substituicao	T-SPEC
+AC-002	U-001	PostgresSaver configurado como checkpointer do graph, com thread_id = chat_id para memoria persistente de conversa	T-SPEC
+AC-003	U-001	O historico de mensagens do chat e recuperado do checkpoint ao invocar o graph com um thread_id (chat_id)	T-SPEC
+AC-004	U-003	O endpoint SSE emite event: node por no executado (retrieve/grade/generate), alem dos tokens e do [DONE]	T-SPEC
+AC-005	U-003	O [DONE] do SSE inclui sources (chunk_id, document_id, content) recuperadas	T-SPEC
+AC-006	U-004	Dois chats distintos (thread_id distintos) nao compartilham memoria no checkpoint	T-SPEC
+AC-007	U-002	O ChatLLM Protocol e o ChatOpenAIAdapter passam a receber mensagens (nao so prompt string) para alimentar o MessagesState	T-SPEC

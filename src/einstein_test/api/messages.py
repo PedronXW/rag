@@ -56,6 +56,15 @@ def _rag_service(session: Session, model: str | None = None) -> RagService:
     return get_rag_service(VectorRepositorySQLAlchemy(session), model=model)
 
 
+def _is_postgres() -> bool:
+    """True se o banco configurado é Postgres (habilita memória via checkpointer)."""
+    from sqlalchemy.engine import make_url
+
+    from einstein_test.settings import get_settings
+
+    return make_url(get_settings().database_url).drivername in ("postgresql", "postgresql+psycopg")
+
+
 def _ensure_chat_owned(session: Session, chat_id: int, user_id: int) -> None:
     _chat_service(session).get_chat(chat_id, user_id=user_id)
 
@@ -141,6 +150,7 @@ async def create_message(
             })
             return
         collected: list[str] = []
+        sources: list[Any] = []
         try:
             history = await _history()
             notice = _notice()
@@ -153,14 +163,21 @@ async def create_message(
                 yield notice
             rag = await run_in_threadpool(_rag_service, session, user_model)
             n_tokens = 0
-            async for token in rag.astream(
+            use_memory = await run_in_threadpool(_is_postgres)
+            async for ev in rag.astream_with_nodes(
                 question=user_message.content,
                 chat_id=chat_id,
                 history=history,
+                use_memory=use_memory,
             ):
-                collected.append(token)
-                n_tokens += 1
-                yield _sse_event(token)
+                if ev["kind"] == "node":
+                    yield _sse_event({"node": ev["node"]}, event="node")
+                elif ev["kind"] == "token":
+                    collected.append(ev["content"])
+                    n_tokens += 1
+                    yield _sse_event(ev["content"])
+                elif ev["kind"] == "done":
+                    sources = ev["sources"]
             answer = "".join(collected)
             assistant = await run_in_threadpool(
                 message_service.create_message,
@@ -173,7 +190,7 @@ async def create_message(
                 "message_id": assistant.id, "n_tokens": n_tokens,
                 "request_id": request_id,
             })
-            yield _sse_event({"message_id": assistant.id})
+            yield _sse_event({"message_id": assistant.id, "sources": sources})
             yield _sse_event("[DONE]")
         except Exception as exc:
             # evita gravar conteúdo do prompt/dados dos arquivos nos logs

@@ -9,9 +9,15 @@ escolhido (F-022); o embedder permanece compartilhado.
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, Callable
 
+from langchain_core.messages import HumanMessage
 from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential
 
-from einstein_test.services.rag.graph import build_graph, build_graph_async, build_prompt
+from einstein_test.services.rag.graph import (
+    build_graph,
+    build_graph_async,
+    build_graph_with_state,
+    build_prompt,
+)
 from einstein_test.services.rag.llm import (
     LLM_MAX_RETRIES,
     LLM_RETRY_BACKOFF,
@@ -29,10 +35,12 @@ class RagService:
         llm: ChatLLM | None = None,
         retriever: VectorRepository | None = None,
         embedder: Embedder | None = None,
+        checkpointer=None,
     ) -> None:
         self.llm: ChatLLM = llm or ChatOpenAIAdapter()
         self.retriever = retriever
         self.embedder: Embedder = embedder or get_embedder()
+        self.checkpointer = checkpointer
         self._graph = None
         self._graph_async = None
 
@@ -54,8 +62,9 @@ class RagService:
         if self.retriever is None:
             raise RuntimeError("retriever não configurado")
         if self._graph is None:
-            self._graph = build_graph(
-                llm=self.llm, retriever=self.retriever, embedder=self.embedder
+            self._graph = build_graph_with_state(
+                llm=self.llm, retriever=self.retriever, embedder=self.embedder,
+                async_=False, checkpointer=self.checkpointer,
             )
         return self._graph
 
@@ -64,8 +73,9 @@ class RagService:
         if self.retriever is None:
             raise RuntimeError("retriever não configurado")
         if self._graph_async is None:
-            self._graph_async = build_graph_async(
-                llm=self.llm, retriever=self.retriever, embedder=self.embedder
+            self._graph_async = build_graph_with_state(
+                llm=self.llm, retriever=self.retriever, embedder=self.embedder,
+                async_=True, checkpointer=self.checkpointer,
             )
         return self._graph_async
 
@@ -81,8 +91,10 @@ class RagService:
                 "question": question,
                 "history": history,
                 "chat_id": chat_id,
+                "messages": [HumanMessage(content=question)],
             },
             stream_mode="custom",
+            config={"configurable": {"thread_id": chat_id}},
         ):
             yield chunk
 
@@ -98,10 +110,69 @@ class RagService:
                 "question": question,
                 "history": history,
                 "chat_id": chat_id,
+                "messages": [HumanMessage(content=question)],
             },
             stream_mode="custom",
+            config={"configurable": {"thread_id": chat_id}},
         ):
             yield chunk
+
+    async def astream_with_nodes(
+        self,
+        question: str,
+        chat_id: int,
+        history: list[str],
+        *,
+        use_memory: bool = False,
+    ) -> AsyncIterator[dict]:
+        """Streaming async emitindo eventos de nó + tokens + state final.
+
+        Com `use_memory=True`, o graph async é compilado com um
+        `AsyncPostgresSaver` (memória persistente por chat) dentro do event
+        loop. Yields dicts: {"kind": "node"|"token"|"done", ...}.
+        """
+        sources: list[Any] = []
+        if use_memory:
+            from einstein_test.services.rag.checkpointer import (
+                build_async_postgres_checkpointer,
+            )
+
+            async with build_async_postgres_checkpointer() as cp:
+                await cp.setup()
+                graph = build_graph_with_state(
+                    llm=self.llm, retriever=self.retriever, embedder=self.embedder,
+                    async_=True, checkpointer=cp,
+                )
+                async for ev in self._astream_events(graph, question, history, chat_id):
+                    if ev["kind"] == "done":
+                        sources = ev["sources"]
+                    yield ev
+        else:
+            async for ev in self._astream_events(self.graph_async, question, history, chat_id):
+                if ev["kind"] == "done":
+                    sources = ev["sources"]
+                yield ev
+
+    async def _astream_events(self, graph, question, history, chat_id) -> AsyncIterator[dict]:
+        async for mode, payload in graph.astream(
+            {
+                "question": question,
+                "history": history,
+                "chat_id": chat_id,
+                "messages": [HumanMessage(content=question)],
+            },
+            stream_mode=["updates", "custom"],
+            config={"configurable": {"thread_id": str(chat_id)}},
+        ):
+            if mode == "updates":
+                for node, update in payload.items():
+                    if isinstance(update, dict) and "sources" in update:
+                        yield {"kind": "done", "sources": update["sources"]}
+                        continue
+                    yield {"kind": "node", "node": node}
+            elif mode == "custom":
+                yield {"kind": "token", "content": payload}
+        yield {"kind": "done", "sources": []}
 
     def _build_prompt(
         self,

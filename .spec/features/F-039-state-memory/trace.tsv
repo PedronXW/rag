@@ -1,0 +1,8 @@
+#AC-id	comando-teste	T-id	status	sha	strict
+AC-001	uv run pytest tests/services/test_rag_state_memory.py -q -k 'messagesstate or substituicao'	T-SPEC	proven	AC-001	0
+AC-002	uv run pytest tests/services/test_rag_state_memory.py -q -k 'postgres'	T-SPEC	proven	AC-002	0
+AC-003	uv run pytest tests/services/test_rag_state_memory.py -q -k 'recupera_historico'	T-SPEC	proven	AC-003	0
+AC-006	uv run pytest tests/services/test_rag_state_memory.py -q -k 'nao_compartilha'	T-SPEC	proven	AC-006	0
+AC-007	uv run pytest tests/services/test_rag_state_memory.py -q -k 'recebe_mensagens'	T-SPEC	proven	AC-007	0
+AC-004	uv run pytest tests/api/test_message_rag_state.py -q -k 'event_node'	T-SPEC	proven	AC-004	0
+AC-005	uv run pytest tests/api/test_message_rag_state.py -q -k 'sources'	T-SPEC	proven	AC-005	0
