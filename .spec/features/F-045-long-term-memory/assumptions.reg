@@ -1,0 +1,5 @@
+#id	tipo	status	texto
+A-001	A	confirmada	PostgresStore por usuario, namespace = user_id.
+A-002	A	confirmada	Endpoints GET/PUT /users/{id}/memory.
+A-003	A	confirmada	Memoria entra no prompt do RAG.
+A-004	A	confirmada	Testes com store injetavel; Postgres em producao.

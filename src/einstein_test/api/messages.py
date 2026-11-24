@@ -177,6 +177,7 @@ async def create_message(
                 chat_id=chat_id,
                 history=history,
                 use_memory=use_memory,
+                user_id=current_user.id,
             ):
                 if ev["kind"] == "node":
                     yield _sse_event({"node": ev["node"]}, event="node")

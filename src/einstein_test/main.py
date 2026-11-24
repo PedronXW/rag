@@ -38,6 +38,9 @@ def create_app() -> FastAPI:
     app.include_router(chats_router)
     app.include_router(messages_router)
     app.include_router(files_router)
+    from einstein_test.api.memory import router as memory_router
+
+    app.include_router(memory_router)
     return app
 
 

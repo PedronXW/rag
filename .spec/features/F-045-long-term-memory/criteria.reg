@@ -1,0 +1,7 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-002	Existe um PostgresStore (LangGraph) com put/get por namespace (user_id)	T-SPEC
+AC-002	U-001	put_memory(user_id, key, value) grava um fato/preferencia	T-SPEC
+AC-003	U-001	get_memory(user_id, key) recupera o fato persistido	T-SPEC
+AC-004	U-003	GET /users/{id}/memory lista a memoria do usuario; PUT /users/{id}/memory grava um item	T-SPEC
+AC-005	U-004	O graph do RAG recupera a memoria de longo prazo do usuario e a inclui no prompt de geracao	T-SPEC
+AC-006	U-002	Dois usuarios distintos nao compartilham memoria (namespaces isolados)	T-SPEC
