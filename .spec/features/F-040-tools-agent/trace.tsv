@@ -1,0 +1,8 @@
+#AC-id	comando-teste	T-id	status	sha	strict
+AC-001	uv run pytest tests/services/test_rag_agent.py -q -k 'registradas'	T-SPEC	proven	AC-001	0
+AC-002	uv run pytest tests/services/test_rag_agent.py -q -k 'search_chunks_filtra or fetch_document'	T-SPEC	proven	AC-002	0
+AC-003	uv run pytest tests/services/test_rag_agent.py -q -k 'loop_de_tools'	T-SPEC	proven	AC-003	0
+AC-004	uv run pytest tests/services/test_rag_agent.py -q -k 'finaliza_com_answer'	T-SPEC	proven	AC-004	0
+AC-005	uv run pytest tests/api/test_agent_route.py -q -k 'agent_rota'	T-SPEC	proven	AC-005	0
+AC-006	uv run pytest tests/api/test_agent_route.py -q -k 'classico_continua'	T-SPEC	proven	AC-006	0
+AC-007	uv run pytest tests/services/test_rag_agent.py -q -k 'fetch_document_multi_tenant'	T-SPEC	proven	AC-007	0

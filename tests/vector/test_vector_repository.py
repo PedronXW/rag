@@ -83,3 +83,26 @@ def test_ac004_embedding_dimension_declared():
     col = FileChunk.__table__.c.embedding
     dim = getattr(col.type, "dim", None)
     assert dim == 1536, "embedding é vector(1536)"
+
+def test_get_chunks_for_chat_multi_tenant(repo):
+    """G-002/AC-007: get_chunks_for_chat só retorna arquivos do chat (e não deletados)."""
+    from einstein_test.models.file import File
+
+    vector_repo, session = repo
+    f1 = File(chat_id=1, name="a.txt", url="s3://b/a", size=5, status="ready")
+    f2 = File(chat_id=2, name="b.txt", url="s3://b/b", size=5, status="ready")
+    session.add_all([f1, f2])
+    session.flush()
+    vector_repo.insert_chunks(file_id=f1.id, chunks=[{"index": 0, "content": "do chat 1", "embedding": [0.1] * 3}])
+    vector_repo.insert_chunks(file_id=f2.id, chunks=[{"index": 0, "content": "do chat 2", "embedding": [0.1] * 3}])
+
+    assert vector_repo.get_chunks_for_chat(chat_id=1, file_id=f1.id), "acessa chunk do próprio chat"
+    assert vector_repo.get_chunks_for_chat(chat_id=1, file_id=f2.id) == [], "não acessa arquivo de outro chat"
+    assert vector_repo.get_chunks_for_chat(chat_id=2, file_id=f1.id) == [], "não acessa arquivo de outro chat"
+
+    # soft-delete: arquivo deletado não é acessível
+    from datetime import UTC, datetime
+
+    f1.deleted_at = datetime.now(UTC)
+    session.flush()
+    assert vector_repo.get_chunks_for_chat(chat_id=1, file_id=f1.id) == [], "arquivo deletado não acessível"

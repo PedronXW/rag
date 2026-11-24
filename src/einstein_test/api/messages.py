@@ -214,6 +214,75 @@ async def create_message(
     )
 
 
+@router.post("/chats/{chat_id}/agent")
+async def create_agent_answer(
+    chat_id: int,
+    payload: MessageCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
+    request_id = current_request_id()
+    try:
+        await run_in_threadpool(_ensure_chat_owned, session, chat_id, current_user.id)
+    except ChatNotFoundError:
+        raise HTTPException(status_code=404, detail="chat não encontrado") from None
+
+    from einstein_test.services.rag.agent import agent_config, build_agent_graph
+
+    rag = _rag_service(session)
+    llm = rag.llm
+    message_service = _message_service(session)
+
+    async def _stream() -> AsyncIterator[str]:
+        graph = build_agent_graph(
+            llm=llm,
+            retriever=VectorRepositorySQLAlchemy(session),
+            embedder=rag.embedder,
+            chat_id=chat_id,
+        )
+        tools_called: list[str] = []
+        answer = ""
+        try:
+            user_message = await run_in_threadpool(
+                message_service.create_message,
+                chat_id=chat_id,
+                content=payload.content,
+                role="user",
+            )
+            async for state in graph.astream(
+                {"question": payload.content},
+                config=agent_config(chat_id),
+                stream_mode="values",
+            ):
+                msgs = state.get("messages") or []
+                for m in msgs:
+                    if getattr(m, "tool_calls", None):
+                        tools_called.extend(tc["name"] for tc in m.tool_calls)
+                if state.get("answer"):
+                    answer = state["answer"]
+            if answer:
+                await run_in_threadpool(
+                    message_service.create_message,
+                    chat_id=chat_id,
+                    content=answer,
+                    role="assistant",
+                )
+            yield _sse_event({"answer": answer, "tools_called": tools_called})
+            yield _sse_event("[DONE]")
+        except Exception as exc:
+            logger.error("falha no agente", extra={
+                "event": "agent_error", "chat_id": chat_id,
+                "error": type(exc).__name__, "request_id": request_id,
+            })
+            yield _sse_event({"error": "falha ao gerar resposta"}, event="error")
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.get("/chats/{chat_id}/messages", response_model=Page[MessageRead])
 def list_messages(
     chat_id: int,

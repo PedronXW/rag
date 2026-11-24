@@ -1,0 +1,5 @@
+#id	tipo	status	texto
+A-001	A	confirmada	StateGraph + Command + ToolNode, adaptado do rag-evolute F-005.
+A-002	A	confirmada	Tools: search_chunks + fetch_document, multi-tenant.
+A-003	A	confirmada	Nova rota /agent; /messages classico intacto.
+A-004	A	confirmada	Testes com FakeChatLLM que emite tool_calls deterministicos.

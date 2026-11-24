@@ -1,0 +1,8 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	Existe um no com ToolNode registrando search_chunks e fetch_document via @tool do langchain	T-SPEC
+AC-002	U-003	search_chunks(question, chat_id) busca chunks do chat via retriever; fetch_document(file_id, chat_id) retorna conteudo do arquivo do chat	T-SPEC
+AC-003	U-002	O graph do agente compila e, quando o LLM decide chamar uma tool, o resultado volta ao estado e o loop continua (ToolMessage observavel)	T-SPEC
+AC-004	U-002	O agente finaliza com answer e usa Command(goto=...) para rotear (sem router fixo)	T-SPEC
+AC-005	U-004	POST /chats/{chat_id}/agent responde (SSE) com a resposta do agente e lista de tools_called no [DONE]	T-SPEC
+AC-006	U-004	POST /chats/{chat_id}/messages continua funcionando (RAG classico, regressao)	T-SPEC
+AC-007	U-003	As tools rejeitam acesso a arquivos/chunks de outro chat (multi-tenant)	T-SPEC

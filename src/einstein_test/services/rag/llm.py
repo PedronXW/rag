@@ -44,6 +44,7 @@ def allowed_models() -> list[str]:
 class ChatLLM(Protocol):
     def stream(self, messages) -> Iterator[str]: ...
     def astream(self, messages) -> AsyncIterator[str]: ...
+    def bind_tools(self, tools): ...
 
 
 class FakeChatLLM:
@@ -58,6 +59,18 @@ class FakeChatLLM:
     async def astream(self, messages) -> AsyncIterator[str]:
         for token in self.tokens:
             yield token
+
+    def bind_tools(self, tools):
+        """Suporte a tool-calling para o agente: responde direto sem tool."""
+
+        class _Bound:
+            def invoke(self, messages):
+                from langchain_core.messages import AIMessage
+
+                return AIMessage(content=" ".join(self_outer.tokens))
+
+        self_outer = self
+        return _Bound()
 
 
 def _is_transient(exc: BaseException) -> bool:
@@ -151,6 +164,10 @@ class ChatOpenAIAdapter:
         yield (getattr(first, "content", None) or "")
         async for chunk in it:
             yield (getattr(chunk, "content", None) or "")
+
+    def bind_tools(self, tools):
+        """Delega ao ChatOpenAI do langchain para tool-calling (agente)."""
+        return self._llm.bind_tools(tools)
 
 
 __all__ = [

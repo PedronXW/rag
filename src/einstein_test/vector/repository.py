@@ -40,6 +40,7 @@ class VectorRepository(Protocol):
         self, file_id: int, chunks: list[dict[str, Any]]
     ) -> list[int]: ...
     def get_chunks(self, file_id: int) -> list[FileChunk]: ...
+    def get_chunks_for_chat(self, chat_id: int, file_id: int) -> list[FileChunk]: ...
     def delete_chunks(self, file_id: int) -> None: ...
     def search_similar(
         self,
@@ -79,6 +80,19 @@ class VectorRepositorySQLAlchemy:
         stmt = (
             select(FileChunk)
             .where(FileChunk.file_id == file_id)
+            .order_by(FileChunk.chunk_index)
+        )
+        return list(self.session.scalars(stmt))
+
+    def get_chunks_for_chat(self, chat_id: int, file_id: int) -> list[FileChunk]:
+        """Chunks de um arquivo, garantindo que o arquivo pertence ao chat e não
+        foi deletado (multi-tenant: impede acesso a arquivos de outros chats)."""
+        stmt = (
+            select(FileChunk)
+            .join(File, File.id == FileChunk.file_id)
+            .where(FileChunk.file_id == file_id)
+            .where(File.chat_id == chat_id)
+            .where(File.deleted_at.is_(None))
             .order_by(FileChunk.chunk_index)
         )
         return list(self.session.scalars(stmt))
