@@ -157,6 +157,7 @@ class RagService:
         from einstein_test.services.rag.callbacks import graph_config
 
         config = graph_config(chat_id=chat_id)
+        sources: list[Any] = []
         async for mode, payload in graph.astream(
             {
                 "question": question,
@@ -170,12 +171,11 @@ class RagService:
             if mode == "updates":
                 for node, update in payload.items():
                     if isinstance(update, dict) and "sources" in update:
-                        yield {"kind": "done", "sources": update["sources"]}
-                        continue
+                        sources = update["sources"]
                     yield {"kind": "node", "node": node}
             elif mode == "custom":
                 yield {"kind": "token", "content": payload}
-        yield {"kind": "done", "sources": []}
+        yield {"kind": "done", "sources": sources}
 
     def _build_prompt(
         self,

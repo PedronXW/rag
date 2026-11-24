@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	trim_messages no /messages, via langchain_core.
+A-002	A	confirmada	stream_mode=messages no /messages, contrato SSE preservado.
+A-003	A	confirmada	Testes com FakeChatLLM deterministico.

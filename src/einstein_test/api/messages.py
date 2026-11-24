@@ -112,11 +112,18 @@ async def create_message(
 
     async def _history() -> list[str]:
         def _load() -> list[str]:
-            return [
+            from langchain_core.messages import HumanMessage
+
+            from einstein_test.services.rag.graph import trim_history
+
+            contents = [
                 m.content
                 for m in message_service.list_messages(chat_id=chat_id)
                 if m.id != user_message.id
-            ][-MAX_HISTORY:]
+            ]
+            msgs = [HumanMessage(content=c) for c in contents]
+            trimmed = trim_history(msgs, max_messages=MAX_HISTORY)
+            return [m.content for m in trimmed]
 
         return await run_in_threadpool(_load)
 

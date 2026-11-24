@@ -19,6 +19,54 @@ from einstein_test.vector.repository import VectorRepository
 CHUNKS_PER_FILE = 2
 MAX_CHUNKS = 12
 
+MAX_HISTORY_MESSAGES = 10
+MAX_HISTORY_TOKENS = 4000
+
+
+def _token_count(messages) -> int:
+    """Contagem aproximada de tokens (chars/4, heurística simples)."""
+    total = 0
+    for m in messages:
+        content = getattr(m, "content", "") or ""
+        total += max(1, len(content) // 4)
+    return total
+
+
+def trim_history(messages, max_messages: int | None = None, max_tokens: int | None = None) -> list:
+    """Limita o histórico às últimas N mensagens E a até K tokens.
+
+    Primeiro mantém as últimas `max_messages`; depois, se ainda exceder
+    `max_tokens`, usa `trim_messages` do langchain_core (estratégia "last").
+    A política de mensagens é a fonte principal (preserva o contrato F-011).
+    """
+    if not messages:
+        return []
+    max_messages = max_messages or MAX_HISTORY_MESSAGES
+    max_tokens = max_tokens or MAX_HISTORY_TOKENS
+
+    # 1) limite por número de mensagens (últimas N)
+    selected = list(messages)[-max_messages:]
+    # 2) limite por tokens
+    if _token_count(selected) > max_tokens:
+        try:
+            from langchain_core.messages import trim_messages as _trim
+
+            trimmed = _trim(
+                selected,
+                max_tokens=max_tokens,
+                strategy="last",
+                token_counter=_token_count,
+                allow_partial=False,
+                start_on="human",
+            )
+            if trimmed:
+                selected = trimmed
+        except Exception:
+            # fallback: remove do início até caber
+            while _token_count(selected) > max_tokens and len(selected) > 1:
+                selected = selected[1:]
+    return selected
+
 
 class RagState(MessagesState):
     """Estado do RAG: MessagesState (histórico) + campos do fluxo.

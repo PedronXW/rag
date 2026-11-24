@@ -1,0 +1,6 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	O historico do /messages e limitado por trim_messages (mantem ultimas N mensagens / ate K tokens)	T-SPEC
+AC-002	U-002	O /messages usa stream_mode=messages para emitir tokens reais do LLM	T-SPEC
+AC-003	U-002	O SSE continua emitindo event: node por no + tokens + done + [DONE] (contrato preservado)	T-SPEC
+AC-004	U-001	Apos o trim, o historico passa a caber no limite de tokens (mensagens mais antigas descartadas)	T-SPEC
+AC-005	U-003	Os testes de SSE existentes continuam passando (regressao)	T-SPEC
