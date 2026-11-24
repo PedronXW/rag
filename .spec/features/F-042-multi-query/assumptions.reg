@@ -1,0 +1,5 @@
+#id	tipo	status	texto
+A-001	A	confirmada	Multi-query completo com Send.
+A-002	A	confirmada	Usar ChatLLM para rewrite.
+A-003	A	confirmada	Nova rota /multi-query; /messages e /agent intactos.
+A-004	A	confirmada	Fusao: dedup por chunk_id + rank por score maximo.

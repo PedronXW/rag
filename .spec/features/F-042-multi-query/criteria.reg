@@ -1,0 +1,7 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-004	Existe um subgraph de retrieval compilado usado como no no graph principal	T-SPEC
+AC-002	U-001	O no de query-rewriting gera N variacoes da pergunta via LLM quando queries > 1	T-SPEC
+AC-003	U-002	O graph usa Send para disparar um retrieve por variacao em paralelo	T-SPEC
+AC-004	U-002	O estado acumula os chunks de todas as variacoes via reducer	T-SPEC
+AC-005	U-003	A fusao deduplica chunks repetidos (chunk_id) e ranqueia por score maximo	T-SPEC
+AC-006	U-004	POST /chats/{chat_id}/multi-query aceita {question, queries} e responde com a resposta e sources	T-SPEC
