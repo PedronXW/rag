@@ -1,0 +1,6 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	Existe um create_react_agent compilado (com tools do chat, multi-tenant) que roda e responde	T-SPEC
+AC-002	U-003	Existe um supervisor (StateGraph/subgraph) que roteia a pergunta para sub-agentes especializados	T-SPEC
+AC-003	U-003	Os sub-agentes (retrieval/doc/evaluate) executam e retornam resultados ao supervisor, que consolida a resposta final	T-SPEC
+AC-004	U-002	POST /chats/{chat_id}/agent/supervisor responde (SSE) com a resposta consolidada e os agentes utilizados	T-SPEC
+AC-005	U-004	As rotas existentes (/messages, /agent, /agent/hitl, /multi-query) continuam funcionando (regressao)	T-SPEC

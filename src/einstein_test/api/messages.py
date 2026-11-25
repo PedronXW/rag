@@ -517,3 +517,65 @@ async def create_multi_query_answer(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.post("/chats/{chat_id}/agent/supervisor")
+async def create_supervisor_answer(
+    chat_id: int,
+    payload: MessageCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
+    request_id = current_request_id()
+    try:
+        await run_in_threadpool(_ensure_chat_owned, session, chat_id, current_user.id)
+    except ChatNotFoundError:
+        raise HTTPException(status_code=404, detail="chat não encontrado") from None
+
+    from einstein_test.services.rag.supervisor import build_supervisor, supervisor_config
+
+    rag = _rag_service(session)
+    message_service = _message_service(session)
+
+    async def _stream() -> AsyncIterator[str]:
+        graph = build_supervisor(
+            llm=rag.llm,
+            retriever=VectorRepositorySQLAlchemy(session),
+            embedder=rag.embedder,
+            chat_id=chat_id,
+        )
+        try:
+            user_message = await run_in_threadpool(
+                message_service.create_message,
+                chat_id=chat_id,
+                content=payload.content,
+                role="user",
+            )
+            out = await run_in_threadpool(
+                graph.invoke,
+                {"question": payload.content, "chat_id": chat_id},
+                supervisor_config(chat_id),
+            )
+            answer = out.get("answer", "")
+            agents = out.get("agents_used", [])
+            if answer:
+                await run_in_threadpool(
+                    message_service.create_message,
+                    chat_id=chat_id,
+                    content=answer,
+                    role="assistant",
+                )
+            yield _sse_event({"answer": answer, "agents_used": agents})
+            yield _sse_event("[DONE]")
+        except Exception as exc:
+            logger.error("falha no supervisor", extra={
+                "event": "supervisor_error", "chat_id": chat_id,
+                "error": type(exc).__name__, "request_id": request_id,
+            })
+            yield _sse_event({"error": "falha ao gerar resposta"}, event="error")
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

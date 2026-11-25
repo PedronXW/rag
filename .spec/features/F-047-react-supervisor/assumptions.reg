@@ -1,0 +1,5 @@
+#id	tipo	status	texto
+A-001	A	confirmada	create_react_agent + supervisor.
+A-002	A	confirmada	Rota /agent/supervisor, SSE.
+A-003	A	confirmada	Sub-agentes: retrieval/doc/evaluate.
+A-004	A	confirmada	Testes com FakeChatLLM deterministico.
