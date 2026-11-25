@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	Retry de nos + avaliacao deterministica.
+A-002	A	confirmada	Harness sem LLM judge; metricas relevance/fidelity/accuracy.
+A-003	A	confirmada	Testes com stubs.

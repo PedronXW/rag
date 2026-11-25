@@ -1,0 +1,6 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	Existe um helper/decorator retry_node que re-executa um no com backoff em falhas transientes	T-SPEC
+AC-002	U-001	O no com retry retorna o resultado apos sucesso na re-execucao (falha transiente absorvida)	T-SPEC
+AC-003	U-002	Existe um harness evaluate_rag que roda o graph e calcula relevance, fidelity e accuracy	T-SPEC
+AC-004	U-003	O harness usa stubs deterministicos (FakeChatLLM/retriever), sem LLM real	T-SPEC
+AC-005	U-002	O harness e executavel via CLI/script (exit 0 no limiar)	T-SPEC

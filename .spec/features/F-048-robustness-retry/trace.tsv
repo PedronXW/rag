@@ -1,0 +1,6 @@
+#AC-id	comando-teste	T-id	status	sha	strict
+AC-001	uv run pytest tests/services/test_rag_robustness.py -q -k 'retry_node'	T-SPEC	proven	AC-001	0
+AC-002	uv run pytest tests/services/test_rag_robustness.py -q -k 'reexecuta'	T-SPEC	proven	AC-002	0
+AC-003	uv run pytest tests/services/test_rag_robustness.py -q -k 'harness_calcula'	T-SPEC	proven	AC-003	0
+AC-004	uv run pytest tests/services/test_rag_robustness.py -q -k 'usado_com_stubs'	T-SPEC	proven	AC-004	0
+AC-005	uv run pytest tests/services/test_rag_robustness.py -q -k 'cli_exit'	T-SPEC	proven	AC-005	0

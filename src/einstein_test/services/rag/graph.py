@@ -154,18 +154,19 @@ def _compile(
     """Compila o StateGraph retrieve -> generate (sync ou async)."""
 
     def _retrieve_sync(state):
-        chunks = _retrieve_chunks(
-            state["question"], state["chat_id"], retriever, embedder
+        from einstein_test.services.rag.retry import retry_node
+
+        chunks = retry_node(
+            lambda: _retrieve_chunks(state["question"], state["chat_id"], retriever, embedder)
         )
         return {"chunks": [_chunk_to_dict(c) for c in chunks], "sources": _sources_from(chunks)}
 
     async def _retrieve_async(state):
+        from einstein_test.services.rag.retry import retry_node
+
         chunks = await asyncio.to_thread(
-            _retrieve_chunks,
-            state["question"],
-            state["chat_id"],
-            retriever,
-            embedder,
+            retry_node,
+            lambda: _retrieve_chunks(state["question"], state["chat_id"], retriever, embedder),
         )
         return {"chunks": [_chunk_to_dict(c) for c in chunks], "sources": _sources_from(chunks)}
 
