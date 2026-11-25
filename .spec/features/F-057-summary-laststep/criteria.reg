@@ -1,0 +1,5 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	summary_node usa IsLastStep como campo gerenciado; nao gera resumo quando nao e a ultima etapa	T-SPEC
+AC-002	U-002	Existe um build_prompt unico (graph) que aceita resumo/memoria opcionais; summary reutiliza-o	T-SPEC
+AC-003	U-003	A sumarizacao continua gerando resumo quando o historico excede o limite	T-SPEC
+AC-004	U-003	Os 579 testes existentes continuam passando (regressao)	T-SPEC

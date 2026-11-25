@@ -1,0 +1,3 @@
+#id	tipo	status	texto
+A-001	A	confirmada	IsLastStep como campo gerenciado no no.
+A-002	A	confirmada	build_prompt unico com resumo/memoria opcionais.
