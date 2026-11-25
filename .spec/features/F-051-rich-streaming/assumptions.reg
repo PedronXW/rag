@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	astream_events com on_chain_start/end e on_chat_model_stream.
+A-002	A	confirmada	Contrato SSE preservado.
+A-003	A	confirmada	Testes com stubs deterministicos.
