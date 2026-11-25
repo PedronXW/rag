@@ -1,0 +1,3 @@
+#id	tipo	status	texto
+A-001	A	confirmada	memoria gerenciada integrada ao RagService.
+A-002	A	confirmada	react/ragas_eval documentados como ferramentas.

@@ -1,0 +1,5 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	O RagService passa a usar a memoria gerenciada (store) no fluxo, recuperando a memoria do usuario no prompt	T-SPEC
+AC-002	U-001	managed.memory_node/build_graph_with_memory_store sao usados pelo RagService (nao so isolados)	T-SPEC
+AC-003	U-002	react e ragas_eval tem documentacao explicitando que sao ferramentas CLI/alternativas	T-SPEC
+AC-004	U-003	Os 584 testes existentes continuam passando (regressao)	T-SPEC
