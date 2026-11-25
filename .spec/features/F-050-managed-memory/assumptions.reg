@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	Store injetado como estado gerenciado; no de memoria no graph.
+A-002	A	confirmada	Memoria isolada por usuario, namespace user_id.
+A-003	A	confirmada	Testes com store injetavel; endpoints preservados.

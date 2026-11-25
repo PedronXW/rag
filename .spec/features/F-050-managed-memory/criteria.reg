@@ -1,0 +1,6 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	O graph RAG aceita o store como estado gerenciado (injetavel), e os nos tem acesso a ele	T-SPEC
+AC-002	U-002	Existe um no de memoria que recupera a memoria do usuario do store e a inclui no estado	T-SPEC
+AC-003	U-002	A memoria recuperada entra no prompt de geracao	T-SPEC
+AC-004	U-003	A memoria e isolada por usuario (namespace user_id) - multi-tenant preservado	T-SPEC
+AC-005	U-004	Os endpoints GET/PUT /users/{id}/memory continuam funcionando (regressao H-002)	T-SPEC
