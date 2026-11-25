@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	readiness nas rotas /agent, /multi-query, /supervisor.
+A-002	A	confirmada	Rate limiting via middleware existente.
+A-003	A	confirmada	Testes com stubs.

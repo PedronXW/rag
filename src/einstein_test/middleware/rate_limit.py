@@ -40,6 +40,11 @@ DEFAULT_LIMITS = {
     "POST /chats/{id}/messages": 20,
     "POST /chats/{id}/files": 10,
     "POST /users": 20,
+    "POST /chats/{id}/agent": 15,
+    "POST /chats/{id}/agent/hitl": 15,
+    "POST /chats/{id}/agent/hitl/resume": 15,
+    "POST /chats/{id}/agent/supervisor": 15,
+    "POST /chats/{id}/multi-query": 15,
 }
 DEFAULT_GLOBAL_LIMIT = 120
 MAX_KEYS = 10_000
@@ -64,6 +69,11 @@ def _route_limits() -> dict[str, int]:
             "RATE_LIMIT_FILES", DEFAULT_LIMITS["POST /chats/{id}/files"]
         ),
         "POST /users": _env_int("RATE_LIMIT_USERS", DEFAULT_LIMITS["POST /users"]),
+        "POST /chats/{id}/agent": _env_int("RATE_LIMIT_AGENT", DEFAULT_LIMITS["POST /chats/{id}/agent"]),
+        "POST /chats/{id}/agent/hitl": _env_int("RATE_LIMIT_HITL", DEFAULT_LIMITS["POST /chats/{id}/agent/hitl"]),
+        "POST /chats/{id}/agent/hitl/resume": _env_int("RATE_LIMIT_RESUME", DEFAULT_LIMITS["POST /chats/{id}/agent/hitl/resume"]),
+        "POST /chats/{id}/agent/supervisor": _env_int("RATE_LIMIT_SUPERVISOR", DEFAULT_LIMITS["POST /chats/{id}/agent/supervisor"]),
+        "POST /chats/{id}/multi-query": _env_int("RATE_LIMIT_MULTIQUERY", DEFAULT_LIMITS["POST /chats/{id}/multi-query"]),
     }
 
 
@@ -83,6 +93,16 @@ def _route_for(path: str) -> str | None:
             return "POST /chats/{id}/messages"
         if len(parts) == 3 and parts[2] == "files":
             return "POST /chats/{id}/files"
+        if len(parts) == 3 and parts[2] == "agent":
+            return "POST /chats/{id}/agent"
+        if len(parts) == 3 and parts[2] == "multi-query":
+            return "POST /chats/{id}/multi-query"
+        if len(parts) == 4 and parts[2] == "agent" and parts[3] == "hitl":
+            return "POST /chats/{id}/agent/hitl"
+        if len(parts) == 5 and parts[2] == "agent" and parts[3] == "hitl" and parts[4] == "resume":
+            return "POST /chats/{id}/agent/hitl/resume"
+        if len(parts) == 4 and parts[2] == "agent" and parts[3] == "supervisor":
+            return "POST /chats/{id}/agent/supervisor"
     return None
 
 

@@ -1,0 +1,6 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	As rotas /agent, /multi-query e /supervisor checam rag_readiness e emitem notice no_ready_files quando nao ha arquivos prontos (sem chamar o LLM)	T-SPEC
+AC-002	U-001	Quando ha arquivos parciais, emitem notice partial_files	T-SPEC
+AC-003	U-002	Com arquivos prontos, a rota roda normalmente (resposta gerada)	T-SPEC
+AC-004	U-003	As rotas RAG sao cobertas por rate limiting (429 quando excede)	T-SPEC
+AC-005	U-003	O /messages continua funcionando (regressao)	T-SPEC

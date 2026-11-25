@@ -57,6 +57,26 @@ def _rag_service(session: Session, model: str | None = None) -> RagService:
     return get_rag_service(VectorRepositorySQLAlchemy(session), model=model)
 
 
+def _rag_readiness_notice(session: Session, chat_id: int) -> str | None:
+    """Retorna o notice SSE de readiness (no_ready_files/partial_files) ou None.
+
+    Reutilizado pelas rotas RAG para não rodar com contexto vazio (evita
+    alucinação) e por consistência com o /messages.
+    """
+    readiness = _file_service(session).rag_readiness(chat_id)
+    if readiness.code == "no_ready_files":
+        return _sse_event(
+            {"code": "no_ready_files", "message": "nenhum arquivo pronto para responder — envie arquivos"},
+            event="notice",
+        )
+    if readiness.code == "partial_files":
+        return _sse_event(
+            {"code": "partial_files", "message": "alguns arquivos ainda em processamento"},
+            event="notice",
+        )
+    return None
+
+
 def _is_postgres() -> bool:
     """True se o banco configurado é Postgres (habilita memória via checkpointer)."""
     from sqlalchemy.engine import make_url
@@ -243,6 +263,11 @@ async def create_agent_answer(
     message_service = _message_service(session)
 
     async def _stream() -> AsyncIterator[str]:
+        notice = await run_in_threadpool(_rag_readiness_notice, session, chat_id)
+        if notice:
+            yield notice
+            yield _sse_event("[DONE]")
+            return
         graph = build_agent_graph(
             llm=llm,
             retriever=VectorRepositorySQLAlchemy(session),
@@ -476,6 +501,11 @@ async def create_multi_query_answer(
     message_service = _message_service(session)
 
     async def _stream() -> AsyncIterator[str]:
+        notice = await run_in_threadpool(_rag_readiness_notice, session, chat_id)
+        if notice:
+            yield notice
+            yield _sse_event("[DONE]")
+            return
         graph = build_multiquery_graph(
             llm=rag.llm,
             retriever=VectorRepositorySQLAlchemy(session),
@@ -538,6 +568,11 @@ async def create_supervisor_answer(
     message_service = _message_service(session)
 
     async def _stream() -> AsyncIterator[str]:
+        notice = await run_in_threadpool(_rag_readiness_notice, session, chat_id)
+        if notice:
+            yield notice
+            yield _sse_event("[DONE]")
+            return
         graph = build_supervisor(
             llm=rag.llm,
             retriever=VectorRepositorySQLAlchemy(session),

@@ -1,0 +1,6 @@
+#AC-id	comando-teste	T-id	status	sha	strict
+AC-001	uv run pytest tests/api/test_rag_readiness.py -q -k 'sem_arquivos'	T-SPEC	proven	AC-001	0
+AC-003	uv run pytest tests/api/test_rag_readiness.py -q -k 'com_arquivo'	T-SPEC	proven	AC-003	0
+AC-004	uv run pytest tests/api/test_rag_readiness.py -q -k 'rate_limit_429'	T-SPEC	proven	AC-004	0
+AC-005	uv run pytest tests/api/test_rag_readiness.py -q -k 'messages_regressao'	T-SPEC	proven	AC-005	0
+AC-002	uv run pytest tests/api/test_rag_readiness.py -q -k 'partial_files'	T-SPEC	proven	AC-002	0
