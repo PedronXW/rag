@@ -102,7 +102,9 @@ def build_hitl_graph(llm, retriever, embedder, *, checkpointer=None):
 
 def hitl_config(chat_id: int) -> dict:
     """Config do HITL com thread_id em namespace próprio (não colide com o RAG)."""
-    return {"configurable": {"thread_id": f"hitl:{chat_id}"}}
+    from einstein_test.services.rag.callbacks import graph_config
+
+    return graph_config(chat_id=f"hitl:{chat_id}")
 
 
 __all__ = ["build_hitl_graph", "hitl_config", "HitlState"]

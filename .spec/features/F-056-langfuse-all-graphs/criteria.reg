@@ -1,0 +1,6 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-002	agent_config injeta callbacks do Langfuse quando habilitado, mantendo thread_id	T-SPEC
+AC-002	U-002	supervisor_config injeta callbacks quando habilitado, mantendo thread_id	T-SPEC
+AC-003	U-002	multi_config injeta callbacks quando habilitado, mantendo thread_id/recursion_limit	T-SPEC
+AC-004	U-002	hitl_config injeta callbacks quando habilitado, mantendo thread_id	T-SPEC
+AC-005	U-003	Os 574 testes existentes continuam passando (regressao)	T-SPEC

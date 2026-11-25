@@ -144,11 +144,12 @@ def build_multiquery_graph(llm, retriever, embedder, *, chat_id: int, checkpoint
 
 
 def multi_config(chat_id: int) -> dict:
-    return {
-        "configurable": {"thread_id": f"multi:{chat_id}"},
-        "recursion_limit": 40,
-        "max_concurrency": 1,
-    }
+    from einstein_test.services.rag.callbacks import graph_config
+
+    cfg = graph_config(chat_id=f"multi:{chat_id}")
+    cfg["recursion_limit"] = 40
+    cfg["max_concurrency"] = 1
+    return cfg
 
 
 __all__ = [

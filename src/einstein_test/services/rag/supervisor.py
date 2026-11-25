@@ -85,7 +85,9 @@ def build_supervisor(llm, retriever, embedder, *, chat_id: int, checkpointer=Non
 
 
 def supervisor_config(chat_id: int) -> dict:
-    return {"configurable": {"thread_id": f"supervisor:{chat_id}"}}
+    from einstein_test.services.rag.callbacks import graph_config
+
+    return graph_config(chat_id=f"supervisor:{chat_id}")
 
 
 __all__ = ["build_supervisor", "supervisor_config"]

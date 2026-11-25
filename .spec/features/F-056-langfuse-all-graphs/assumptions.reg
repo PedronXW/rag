@@ -1,0 +1,3 @@
+#id	tipo	status	texto
+A-001	A	confirmada	callbacks via graph_config, mantendo thread_id/recursion_limit.
+A-002	A	confirmada	Langfuse desabilitado nos testes deterministicos.

@@ -136,7 +136,11 @@ def build_agent_graph(
 
 
 def agent_config(chat_id: int) -> dict:
-    return {"configurable": {"thread_id": str(chat_id)}, "recursion_limit": MAX_AGENT_STEPS}
+    from einstein_test.services.rag.callbacks import graph_config
+
+    cfg = graph_config(chat_id=chat_id)
+    cfg["recursion_limit"] = MAX_AGENT_STEPS
+    return cfg
 
 
 __all__ = ["build_agent_graph", "build_tools", "agent_config", "AgentState"]
