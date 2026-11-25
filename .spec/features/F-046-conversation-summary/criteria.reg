@@ -1,0 +1,6 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-002	Existe um no que gera um SummaryMessage dos turnos antigos quando o historico excede o limite	T-SPEC
+AC-002	U-001	O resumo entra no prompt como contexto inicial (antes das mensagens recentes)	T-SPEC
+AC-003	U-003	A geracao do resumo usa IsLastStep (roda so na ultima etapa)	T-SPEC
+AC-004	U-001	Quando o historico nao excede o limite, nenhum resumo e gerado (sem custo extra)	T-SPEC
+AC-005	U-002	O resumo combina com trim_history (resumo + ultimas N mensagens)	T-SPEC

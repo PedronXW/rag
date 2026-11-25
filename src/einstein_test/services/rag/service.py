@@ -153,6 +153,25 @@ class RagService:
         except Exception:
             return history
 
+    def _with_summary(self, history: list[str]) -> list[str]:
+        """Se o histórico exceder o limite, substitui os turnos antigos por um resumo.
+
+        Combina com `trim_history`: resumo (SystemMessage) + últimas N mensagens.
+        """
+        from langchain_core.messages import HumanMessage
+
+        from einstein_test.services.rag.summary import should_summarize, summarize_old_turns
+
+        msgs = [HumanMessage(content=c) for c in history]
+        if not should_summarize(msgs):
+            return history
+        result = summarize_old_turns(self.llm, msgs)
+        recent = [m.content for m in result["recent"]]
+        summary = result["summary"].content if result["summary"] is not None else ""
+        if not summary:
+            return history
+        return [f"<resumo_da_conversa>{summary}</resumo_da_conversa>"] + recent
+
     async def astream_with_nodes(
         self,
         question: str,
@@ -169,6 +188,7 @@ class RagService:
         loop. Yields dicts: {"kind": "node"|"token"|"done", ...}.
         """
         sources: list[Any] = []
+        history = self._with_summary(history)
         history = self._with_memory(history, user_id)
         if use_memory:
             from einstein_test.services.rag.checkpointer import (

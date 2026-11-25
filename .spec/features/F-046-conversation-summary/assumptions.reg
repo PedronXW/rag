@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	Resumo quando excede limite, via IsLastStep.
+A-002	A	confirmada	Resumo como contexto inicial no prompt.
+A-003	A	confirmada	Testes com FakeChatLLM deterministico.

@@ -1,0 +1,6 @@
+#AC-id	comando-teste	T-id	status	sha	strict
+AC-001	uv run pytest tests/services/test_rag_summary.py -q -k 'gera_resumo or gera_summary'	T-SPEC	proven	AC-001	0
+AC-002	uv run pytest tests/services/test_rag_summary.py -q -k 'resumo_entra or gera_summary'	T-SPEC	proven	AC-002	0
+AC-003	uv run pytest tests/services/test_rag_summary.py -q -k 'IsLastStep or is_last_step'	T-SPEC	proven	AC-003	0
+AC-004	uv run pytest tests/services/test_rag_summary.py -q -k 'sem_resumo'	T-SPEC	proven	AC-004	0
+AC-005	uv run pytest tests/services/test_rag_summary.py -q -k 'combina_com_trim'	T-SPEC	proven	AC-005	0
