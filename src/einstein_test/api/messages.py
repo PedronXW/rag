@@ -227,7 +227,7 @@ async def create_message(
                 "event": "rag_error", "chat_id": chat_id,
                 "error": type(exc).__name__,
                 "request_id": request_id,
-            })
+            }, exc_info=True)
             yield _sse_event(
                 {"error": "falha ao gerar resposta"},
                 event="error",

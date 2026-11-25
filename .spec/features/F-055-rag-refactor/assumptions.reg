@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	retrieval.py como fonte unica; modulos refatorados.
+A-002	A	confirmada	rich_stream conectado ao /messages via astream_events.
+A-003	A	confirmada	Contrato SSE preservado.

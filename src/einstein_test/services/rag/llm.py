@@ -17,6 +17,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from einstein_test.services.rag.retrieval import _is_transient
 from einstein_test.settings import get_settings
 
 DEFAULT_CHAT_MODEL = "azure/gpt-5-mini"
@@ -71,11 +72,6 @@ class FakeChatLLM:
 
         self_outer = self
         return _Bound()
-
-
-def _is_transient(exc: BaseException) -> bool:
-    """Exceções re-tentáveis (rede/storage/timeout/provedor temporário)."""
-    return isinstance(exc, (ConnectionError, TimeoutError, OSError))
 
 
 def _retrying() -> AsyncRetrying:

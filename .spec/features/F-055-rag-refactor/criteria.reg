@@ -1,0 +1,5 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	Existe retrieval.py com retrieve_chunks/chunk_to_dict/_is_transient; os modulos do RAG usam essas funcoes (sem hardcode)	T-SPEC
+AC-002	U-002	Nao ha _chunk_to_dict/_is_transient duplicados nos modulos do RAG (fonte unica)	T-SPEC
+AC-003	U-003	O RagService expõe streaming rico via astream_events (rich=True), mantendo o streaming padrao com tokens individuais no /messages	T-SPEC
+AC-004	U-003	Os 567 testes existentes continuam passando (regressao)	T-SPEC

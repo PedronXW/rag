@@ -180,16 +180,19 @@ class RagService:
         *,
         use_memory: bool = False,
         user_id: int | None = None,
+        rich: bool = False,
     ) -> AsyncIterator[dict]:
         """Streaming async emitindo eventos de nó + tokens + state final.
 
         Com `use_memory=True`, o graph async é compilado com um
         `AsyncPostgresSaver` (memória persistente por chat) dentro do event
-        loop. Yields dicts: {"kind": "node"|"token"|"done", ...}.
+        loop. Com `rich=True`, usa `astream_events` (rich_stream). Yields
+        dicts: {"kind": "node"|"token"|"done", ...}.
         """
         sources: list[Any] = []
         history = self._with_summary(history)
         history = self._with_memory(history, user_id)
+        streamer = self._astream_rich if rich else self._astream_events
         if use_memory:
             from einstein_test.services.rag.checkpointer import (
                 build_async_postgres_checkpointer,
@@ -201,12 +204,12 @@ class RagService:
                     llm=self.llm, retriever=self.retriever, embedder=self.embedder,
                     async_=True, checkpointer=cp,
                 )
-                async for ev in self._astream_events(graph, question, history, chat_id):
+                async for ev in streamer(graph, question, history, chat_id):
                     if ev["kind"] == "done":
                         sources = ev["sources"]
                     yield ev
         else:
-            async for ev in self._astream_events(self.graph_async, question, history, chat_id):
+            async for ev in streamer(self.graph_async, question, history, chat_id):
                 if ev["kind"] == "done":
                     sources = ev["sources"]
                 yield ev
@@ -233,6 +236,45 @@ class RagService:
                     yield {"kind": "node", "node": node}
             elif mode == "custom":
                 yield {"kind": "token", "content": payload}
+        yield {"kind": "done", "sources": sources}
+
+    async def _astream_rich(self, graph, question, history, chat_id) -> AsyncIterator[dict]:
+        """Streaming via astream_events (rich_stream): eventos por nó + tokens.
+
+        Mantém o mesmo contrato de saída de `_astream_events` (node/token/done).
+        Roda o graph uma única vez via `astream_events`.
+        """
+        from einstein_test.services.rag.callbacks import graph_config
+        from einstein_test.services.rag.rich_stream import node_events, token_events
+
+        kwargs = {
+            "question": question,
+            "history": history,
+            "chat_id": chat_id,
+            "messages": [HumanMessage(content=question)],
+        }
+        config = graph_config(chat_id=chat_id)
+        sources: list[Any] = []
+        emitted_tokens = False
+
+        async for event in graph.astream_events(kwargs, version="v2", config=config):
+            ev = event.get("event", "")
+            name = event.get("name", "")
+            if ev == "on_chain_start" and name not in ("LangGraph", "LangGraphGraph"):
+                yield {"kind": "node", "node": name}
+            elif ev == "on_chat_model_stream":
+                chunk = event.get("data", {}).get("chunk")
+                content = getattr(chunk, "content", None)
+                if content:
+                    emitted_tokens = True
+                    yield {"kind": "token", "content": content}
+            elif ev == "on_chain_end" and name == "generate":
+                data = event.get("data", {}).get("output", {})
+                if isinstance(data, dict):
+                    if data.get("sources"):
+                        sources = data["sources"]
+                    if data.get("answer") and not emitted_tokens:
+                        yield {"kind": "token", "content": data["answer"]}
         yield {"kind": "done", "sources": sources}
 
     def _build_prompt(

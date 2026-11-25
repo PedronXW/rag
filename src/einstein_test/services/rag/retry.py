@@ -7,9 +7,7 @@ timeout), absorvendo a falha se a re-execução tiver sucesso.
 import time
 from typing import Callable
 
-
-def _is_transient(exc: BaseException) -> bool:
-    return isinstance(exc, (TimeoutError, ConnectionError, OSError))
+from einstein_test.services.rag.retrieval import _is_transient
 
 
 def retry_node(

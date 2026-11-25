@@ -56,18 +56,13 @@ def build_tools(retriever, embedder, chat_id: int) -> list[Any]:
         r = _retriever or retriever
         e = _embedder or embedder
         cid = _chat_id or chat_id
-        embedding = e.embed([question])[0]
-        chunks = r.search_similar(
-            embedding=embedding,
-            chat_id=cid,
-            chunks_per_file=2,
-            max_chunks=12,
-        ) or []
+        from einstein_test.services.rag.retrieval import retrieve_chunks
+
+        chunks = retrieve_chunks(question, r, e, cid)
         if not chunks:
             return "Nenhum chunk relevante encontrado no chat."
         return "\n\n".join(
-            f"[chunk {getattr(c, 'id', '?')}] (doc {getattr(c, 'file_id', '?')}) "
-            f"{getattr(c, 'content', str(c))}"
+            f"[chunk {c['chunk_id']}] (doc {c['document_id']}) {c['content']}"
             for c in chunks
         )
 

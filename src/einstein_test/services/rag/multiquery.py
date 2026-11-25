@@ -17,33 +17,10 @@ class RetrievalState(TypedDict):
     chunks: list[dict]
 
 
-def _chunk_to_dict(c: Any, query_embedding: list[float] | None = None) -> dict:
-    """Converte um chunk em dict serializável; calcula score real via cosine."""
-    score = 0.0
-    if query_embedding is not None and getattr(c, "embedding", None) is not None:
-        from einstein_test.vector.similarity import cosine_similarity
-
-        score = round(cosine_similarity(query_embedding, list(c.embedding)), 6)
-    return {
-        "chunk_id": getattr(c, "id", None),
-        "document_id": getattr(c, "file_id", None),
-        "content": getattr(c, "content", str(c)),
-        "score": getattr(c, "score", score),
-    }
-
-
 def _retrieve_chunks(query: str, retriever, embedder, chat_id: int) -> list[dict]:
-    embedding = embedder.embed([query])[0]
-    chunks = (
-        retriever.search_similar(
-            embedding=embedding,
-            chat_id=chat_id,
-            chunks_per_file=2,
-            max_chunks=12,
-        )
-        or []
-    )
-    return [_chunk_to_dict(c, embedding) for c in chunks]
+    from einstein_test.services.rag.retrieval import retrieve_chunks
+
+    return retrieve_chunks(query, retriever, embedder, chat_id)
 
 
 def _make_sub_retrieve(retriever, embedder, chat_id: int):

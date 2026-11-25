@@ -110,37 +110,24 @@ def build_prompt(
 
 def _chunk_to_dict(c: Any) -> dict:
     """Converte um chunk (objeto ou dict) em dict serializável para o estado."""
-    if isinstance(c, dict):
-        return {
-            "chunk_id": c.get("id") or c.get("chunk_id"),
-            "document_id": c.get("file_id") or c.get("document_id"),
-            "content": c.get("content", ""),
-        }
-    return {
-        "chunk_id": getattr(c, "id", None),
-        "document_id": getattr(c, "file_id", None),
-        "content": getattr(c, "content", str(c)),
-    }
+    from einstein_test.services.rag.retrieval import chunk_to_dict
+
+    return chunk_to_dict(c)
 
 
 def _retrieve_chunks(
     question: str, chat_id: int, retriever: VectorRepository, embedder: Embedder
 ) -> list[Any]:
-    """Busca os chunks mais similares do chat para a pergunta."""
-    embedding = embedder.embed([question])[0]
-    return (
-        retriever.search_similar(
-            embedding=embedding,
-            chat_id=chat_id,
-            chunks_per_file=CHUNKS_PER_FILE,
-            max_chunks=MAX_CHUNKS,
-        )
-        or []
-    )
+    """Busca os chunks mais similares do chat para a pergunta (usa retrieval.py)."""
+    from einstein_test.services.rag.retrieval import retrieve_chunks
+
+    return retrieve_chunks(question, retriever, embedder, chat_id)
 
 
 def _sources_from(chunks: list[Any]) -> list[dict]:
-    return [_chunk_to_dict(c) for c in chunks]
+    from einstein_test.services.rag.retrieval import chunk_to_dict
+
+    return [chunk_to_dict(c) for c in chunks]
 
 
 def _compile(

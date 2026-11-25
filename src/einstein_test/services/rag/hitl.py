@@ -30,27 +30,11 @@ def build_hitl_graph(llm, retriever, embedder, *, checkpointer=None):
     """Constrói o StateGraph do RAG com human-in-the-loop (retrieve→generate→review)."""
 
     def _retrieve(state: HitlState) -> dict:
-        embedding = embedder.embed([state["question"]])[0]
-        chunks = (
-            retriever.search_similar(
-                embedding=embedding,
-                chat_id=state["chat_id"],
-                chunks_per_file=2,
-                max_chunks=12,
-            )
-            or []
-        )
-        context = "\n".join(f"- {getattr(c, 'content', str(c))}" for c in chunks)
-        # chunks como dicts serializáveis para o checkpointer
-        dicts = [
-            {
-                "chunk_id": getattr(c, "id", None),
-                "document_id": getattr(c, "file_id", None),
-                "content": getattr(c, "content", str(c)),
-            }
-            for c in chunks
-        ]
-        return {"chunks": dicts, "context": context}
+        from einstein_test.services.rag.retrieval import retrieve_chunks
+
+        chunks = retrieve_chunks(state["question"], retriever, embedder, state["chat_id"])
+        context = "\n".join(f"- {c['content']}" for c in chunks)
+        return {"chunks": chunks, "context": context}
 
     def _generate(state: HitlState) -> dict:
         from langchain_core.messages import HumanMessage, SystemMessage
