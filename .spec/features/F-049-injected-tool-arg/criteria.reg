@@ -1,0 +1,5 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	As tools (search_chunks, fetch_document) declaram retriever/embedder/chat_id com InjectedToolArg	T-SPEC
+AC-002	U-002	O runtime injeta os valores automaticamente ao invocar a tool (sem closure)	T-SPEC
+AC-003	U-003	O agente continua funcionando e respeita o multi-tenant (so dados do chat)	T-SPEC
+AC-004	U-003	O create_react_agent/supervisor que usa as tools continua funcional (regressao)	T-SPEC

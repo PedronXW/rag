@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	InjectedToolArg do langchain-core para retriever/embedder/chat_id.
+A-002	A	confirmada	Padrao idiomatico; sem quebrar o agente.
+A-003	A	confirmada	Testes com stubs deterministicos.

@@ -6,10 +6,10 @@ resposta. As tools são criadas por factory com o retriever/embedder/chat_id
 injetados (multi-tenant: só acessam dados do chat).
 """
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.tools import tool
+from langchain_core.tools import InjectedToolArg, tool
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.types import Command
@@ -29,21 +29,37 @@ SYSTEM_PROMPT = (
 class AgentState(MessagesState):
     question: str
     answer: str
+    chat_id: int
+    retriever: Any
+    embedder: Any
 
 
 def build_tools(retriever, embedder, chat_id: int) -> list[Any]:
-    """Cria as tools do agente com o retriever/embedder/chat_id injetados."""
+    """Cria as tools do agente usando `InjectedToolArg`.
+
+    `retriever`/`embedder`/`chat_id` são injetados pelo runtime (ToolNode) na
+    chamada, ocultos do schema do LLM. O factory ainda os captura como defaults
+    para os callers que não passam pelo ToolNode.
+    """
 
     @tool
-    def search_chunks(question: str) -> str:
+    def search_chunks(
+        question: str,
+        _retriever: Annotated[Any, InjectedToolArg] = None,
+        _embedder: Annotated[Any, InjectedToolArg] = None,
+        _chat_id: Annotated[int, InjectedToolArg] = 0,
+    ) -> str:
         """Busca os chunks mais relevantes do chat para a pergunta (busca vetorial).
 
         Retorna o conteúdo dos chunks com o score de similaridade.
         """
-        embedding = embedder.embed([question])[0]
-        chunks = retriever.search_similar(
+        r = _retriever or retriever
+        e = _embedder or embedder
+        cid = _chat_id or chat_id
+        embedding = e.embed([question])[0]
+        chunks = r.search_similar(
             embedding=embedding,
-            chat_id=chat_id,
+            chat_id=cid,
             chunks_per_file=2,
             max_chunks=12,
         ) or []
@@ -56,12 +72,18 @@ def build_tools(retriever, embedder, chat_id: int) -> list[Any]:
         )
 
     @tool
-    def fetch_document(file_id: int) -> str:
+    def fetch_document(
+        file_id: int,
+        _retriever: Annotated[Any, InjectedToolArg] = None,
+        _chat_id: Annotated[int, InjectedToolArg] = 0,
+    ) -> str:
         """Busca o conteúdo de um arquivo do chat pelo id.
 
         Retorna o conteúdo apenas se o arquivo pertence ao chat (multi-tenant).
         """
-        chunks = retriever.get_chunks_for_chat(chat_id, file_id) or []
+        r = _retriever or retriever
+        cid = _chat_id or chat_id
+        chunks = r.get_chunks_for_chat(cid, file_id) or []
         if not chunks:
             return f"Arquivo {file_id} não encontrado neste chat."
         return "\n".join(getattr(c, "content", str(c)) for c in chunks)
