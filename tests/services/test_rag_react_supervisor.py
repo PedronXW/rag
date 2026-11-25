@@ -57,7 +57,7 @@ def test_react_agent_compila():
     # a factory é construível e expõe a API (Runnable real em produção via ChatOpenAIAdapter)
     assert callable(build_react_agent)
     cfg = react_config(chat_id=1)
-    assert cfg["configurable"]["thread_id"] == "1"
+    assert cfg["configurable"]["thread_id"] == "react:1"
     # o módulo referencia create_react_agent do langgraph-prebuilt
     import inspect
 

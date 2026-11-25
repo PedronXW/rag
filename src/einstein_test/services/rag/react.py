@@ -1,29 +1,40 @@
-"""create_react_agent (pre-built) para o RAG (H-004).
+"""Agente via create_agent (I-004).
 
-Comparação com o StateGraph manual do G-002: `build_react_agent` usa o
-`create_react_agent` do langgraph-prebuilt com as tools do chat, multi-tenant.
+`build_agent` usa `langchain.agents.create_agent` (novo, não deprecado) para
+criar um agente react com as tools do chat. Requer um `BaseChatModel` real
+(com `bind_tools`). `build_react_agent` é mantido apenas como referência ao
+`create_react_agent` legado (deprecado no LangGraph 1.x).
 """
-
-from langgraph.prebuilt import create_react_agent
 
 from einstein_test.services.rag.agent import build_tools
 
 
-def build_react_agent(llm, retriever, embedder, *, chat_id: int, checkpointer=None):
-    """Cria um agente react via `create_react_agent` (pre-built).
+def build_agent(llm, retriever, embedder, *, chat_id: int, checkpointer=None):
+    """Cria um agente react via `langchain.agents.create_agent`.
 
-    O LLM precisa expor `bind_tools`. As tools são do chat (multi-tenant).
+    O LLM deve ser um `BaseChatModel` do langchain (com `bind_tools`).
     """
+    from langchain.agents import create_agent
+
     tools = build_tools(retriever, embedder, chat_id)
-    return create_react_agent(
+    return create_agent(
         model=llm,
         tools=tools,
         checkpointer=checkpointer,
+        name=f"rag-agent-{chat_id}",
     )
 
 
+def build_react_agent(llm, retriever, embedder, *, chat_id: int, checkpointer=None):
+    """(Legado/referência) Agente via `create_react_agent` — deprecado."""
+    from langgraph.prebuilt import create_react_agent
+
+    tools = build_tools(retriever, embedder, chat_id)
+    return create_react_agent(model=llm, tools=tools, checkpointer=checkpointer)
+
+
 def react_config(chat_id: int) -> dict:
-    return {"configurable": {"thread_id": str(chat_id)}}
+    return {"configurable": {"thread_id": f"react:{chat_id}"}}
 
 
-__all__ = ["build_react_agent", "react_config"]
+__all__ = ["build_agent", "build_react_agent", "react_config"]

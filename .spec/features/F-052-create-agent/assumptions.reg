@@ -1,0 +1,3 @@
+#id	tipo	status	texto
+A-001	A	confirmada	create_agent do langchain.agents substitui create_react_agent.
+A-002	A	confirmada	Testes com stub deterministico.
