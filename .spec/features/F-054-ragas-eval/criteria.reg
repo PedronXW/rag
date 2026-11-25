@@ -1,0 +1,5 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	evaluate_ragas calcula faithfulness e answer_correctness usando um LLM juiz sobre os casos	T-SPEC
+AC-002	U-002	O juiz e injetavel (stub deterministico nos testes)	T-SPEC
+AC-003	U-001	O harness roda o graph RAG para obter contexto + resposta	T-SPEC
+AC-004	U-003	O harness e executavel via CLI/script (exit 0 no limiar)	T-SPEC

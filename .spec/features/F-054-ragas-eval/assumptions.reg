@@ -1,0 +1,3 @@
+#id	tipo	status	texto
+A-001	A	confirmada	RAGAS com faithfulness/answer_correctness; juiz injetavel.
+A-002	A	confirmada	Testes com juiz stub deterministico.
