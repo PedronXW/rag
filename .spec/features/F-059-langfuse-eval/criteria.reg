@@ -1,0 +1,5 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	evaluate_ragas/harness registra scores no Langfuse (via create_score) por caso avaliado, quando habilitado	T-SPEC
+AC-002	U-002	Existe um runner de run_batched_evaluation do Langfuse para datasets	T-SPEC
+AC-003	U-003	Com Langfuse desabilitado, o harness roda sem registrar (deterministico)	T-SPEC
+AC-004	U-003	Os 589 testes existentes continuam passando (regressao)	T-SPEC

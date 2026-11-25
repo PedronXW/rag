@@ -7,7 +7,7 @@ produção, pode ser um `BaseChatModel` do langchain ou uma integração RAGAS.
 
 import argparse
 import sys
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 from einstein_test.services.rag.graph import build_graph
 
@@ -25,14 +25,24 @@ def collect_case(case: dict, *, llm, retriever, embedder) -> dict:
     return {"question": case["question"], "answer": result.get("answer", ""), "contexts": contexts}
 
 
-def evaluate_ragas(cases, *, judge: Judge, llm=None, retriever=None, embedder=None) -> list[dict]:
+def evaluate_ragas(
+    cases,
+    *,
+    judge: Judge,
+    llm=None,
+    retriever=None,
+    embedder=None,
+    score_manager: Callable[..., None] | None = None,
+    trace_id: str | None = None,
+) -> list[dict]:
     """Avalia os casos com um juiz LLM, calculando faithfulness e correctness.
 
     Usa `collect_case` para rodar o graph (a menos que o caso já traga
-    `answer`/`contexts`); então o juiz avalia cada caso.
+    `answer`/`contexts`); então o juiz avalia cada caso. Se `score_manager` for
+    fornecido, registra os scores por caso (ex.: Langfuse).
     """
     results = []
-    for case in cases:
+    for idx, case in enumerate(cases):
         if "answer" in case and "contexts" in case:
             collected = case
         elif llm is not None and retriever is not None and embedder is not None:
@@ -44,14 +54,26 @@ def evaluate_ragas(cases, *, judge: Judge, llm=None, retriever=None, embedder=No
             answer=collected.get("answer", ""),
             contexts=collected.get("contexts", []),
         )
-        results.append(
-            {
-                "question": collected["question"],
-                "answer": collected.get("answer", ""),
-                "faithfulness": scores.get("faithfulness", 0.0),
-                "answer_correctness": scores.get("answer_correctness", 0.0),
-            }
-        )
+        entry = {
+            "question": collected["question"],
+            "answer": collected.get("answer", ""),
+            "faithfulness": scores.get("faithfulness", 0.0),
+            "answer_correctness": scores.get("answer_correctness", 0.0),
+        }
+        results.append(entry)
+        if score_manager is not None:
+            score_manager(
+                name="faithfulness",
+                value=entry["faithfulness"],
+                trace_id=trace_id,
+                comment=f"case {idx}: {case['question']}",
+            )
+            score_manager(
+                name="answer_correctness",
+                value=entry["answer_correctness"],
+                trace_id=trace_id,
+                comment=f"case {idx}: {case['question']}",
+            )
     return results
 
 

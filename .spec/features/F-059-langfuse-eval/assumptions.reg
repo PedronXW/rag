@@ -1,0 +1,3 @@
+#id	tipo	status	texto
+A-001	A	confirmada	scores por trace + run_batched_evaluation.
+A-002	A	confirmada	Langfuse desabilitado nos testes; client stub/mock.
