@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white)
 ![PostgreSQL+pgvector](https://img.shields.io/badge/PostgreSQL-15%2B-4169E1?logo=postgresql&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-475%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-643%20passed-brightgreen)
 ![Lint](https://img.shields.io/badge/ruff-lint%20ok-brightgreen)
 
 ---
@@ -48,6 +48,14 @@ Tudo é multi-tenant por chat e por usuário: nenhum arquivo de um chat é usado
 - **Upload e vetorização assíncrona** de arquivos (Celery + Redis, com retry e backoff);
 - **Busca vetorial por similaridade** (pgvector + índice HNSW) filtrada por chat;
 - **Resposta com streaming** (Server-Sent Events) e *notices* quando não há arquivos prontos;
+- **Múltiplos modos de resposta RAG**: clássico (`/messages`), **agente react com tools**, **multi-query** (subgraphs), **supervisor multi-agente** e **human-in-the-loop** (F-040 a F-053);
+- **Memória de conversa** (checkpointer), **memória de longo prazo** (PostgresStore) e **sumarização** (F-039, F-045, F-046, F-050);
+- **Modelos locais via Ollama** — LLM (`ollama/<modelo>`) e embeddings (`EMBEDDER=ollama`) 100% locais, sem chave de nuvem (F-060);
+- **Guardrails de entrada/saída** — injeção de prompt, PII, política e grounding (F-061);
+- **Refiners de resposta** — dedup, citação de fontes e mascaramento de PII (F-061);
+- **LGPD** — consentimento do usuário, DSR de exportação e apagamento (F-061);
+- **MCP (Model Context Protocol)** — expõe as tools do RAG como servidor MCP (F-062);
+- **Observabilidade** — tracing e avaliação via **Langfuse** (F-043, F-056, F-059);
 - **Autenticação JWT** com bcrypt e **rate limiting** por usuário/IP;
 - **Paginação** padronizada (`{items, page, page_size, total, total_pages}`) nos endpoints de listagem;
 - **Alembic** para migrações com *advisory lock* (seguro para rodar em boot concorrente de api/worker);
@@ -65,8 +73,11 @@ flowchart LR
     W <-->|chunks + embeddings| P
     W <-->|arquivos| S[(MinIO / S3)]
     A <-->|broker/result| R[(Redis)]
-    A -->|embeddings| E[Embedder OpenAI-compatível]
-    A -->|prompt + contexto| L[LLM OpenAI-compatível]
+    A -->|embeddings| E[Embedder OpenAI-compatível ou Ollama]
+    A -->|prompt + contexto| L[LLM OpenAI-compatível ou Ollama]
+    A -->|tools RAG| MCP[MCP server (stdio/http)]
+    A -->|guardrails/refiners| G[Guardrails + Refiners]
+    A -->|traces + scores| LF[Langfuse]
 ```
 
 **Fluxo do RAG**
@@ -108,7 +119,7 @@ A "base de conhecimento" é o conjunto de arquivos enviados aos chats, processad
 |---|---|---|
 | **Upload** | Arquivo validado (tipo, tamanho, duplicidade) e salvo no storage | MinIO (local) / S3 (prod) |
 | **Chunking** | Texto extraído e dividido em pedaços | — |
-| **Embedding** | Cada chunk vira um vetor de **1536 dimensões** (`cohere/embed-v4.0` via endpoint OpenAI-compatível) | tabela `file_chunks` |
+| **Embedding** | Cada chunk vira um vetor de **1536 dimensões** — `cohere/embed-v4.0` via endpoint OpenAI-compatível **ou** local via Ollama (`EMBEDDER=ollama`, `nomic-embed-text` 768 dims zero-padded) | tabela `file_chunks` |
 | **Indexação** | Índice **HNSW** sobre `embedding` com `vector_cosine_ops` (busca por aproximação) | pgvector |
 | **Retrieval** | Busca os chunks mais similares **do chat** (`ORDER BY embedding <=> query`) com limite de candidatos | pgvector + re-rank em Python |
 | **Re-rank** | Máx. **2 chunks por arquivo**, teto global de **12**, ordenados por similaridade | `vector/similarity.py` |
@@ -140,6 +151,29 @@ Ao subir, o compose inicializa **PostgreSQL + pgvector**, **MinIO**, **Redis**, 
 - Swagger UI: <http://localhost:8000/docs>
 - Healthcheck: <http://localhost:8000/health>
 - Console do MinIO: <http://localhost:9001> (`minioadmin` / `minioadmin`)
+
+> **Langfuse** (opcional): suba com `docker compose up -d langfuse` — a UI fica em
+> <http://localhost:3000> (admin@localhost / senha em `LANGFUSE_INIT_PASSWORD`).
+
+### Modelos locais com Ollama (opcional, F-060)
+
+O projeto suporta **LLM e embeddings 100% locais** via Ollama, sem depender de
+chave/endpoint de nuvem:
+
+```bash
+docker compose up -d ollama
+docker compose exec ollama ollama pull llama3.2        # LLM local
+docker compose exec ollama ollama pull nomic-embed-text  # embeddings (768 dims)
+```
+
+No `.env`, libere o modelo na allowlist e aponte o embedder para local:
+
+```bash
+EMBEDDER=ollama
+ALLOWED_MODELS=azure/gpt-5-mini,azure/gpt-6-luna,ollama/llama3.2
+```
+
+E o usuário escolhe o modelo local: `PATCH /users/me {"model": "ollama/llama3.2"}`.
 
 ### 2) Rodar sem Docker (com uv)
 
@@ -188,10 +222,20 @@ Autenticação via header `Authorization: Bearer <access_token>` (obtido no logi
 | `GET` | `/chats` | Listar chats (paginado) |
 | `GET` | `/chats/{chat_id}` | Detalhe do chat |
 | `DELETE` | `/chats/{chat_id}` | Deletar chat (soft delete) |
-| `POST` | `/chats/{chat_id}/messages` | Enviar mensagem → **SSE** com a resposta |
+| `POST` | `/chats/{chat_id}/messages` | Enviar mensagem → **SSE** com a resposta (RAG clássico) |
+| `POST` | `/chats/{chat_id}/agent` | Agente react com tools → **SSE** |
+| `POST` | `/chats/{chat_id}/agent/hitl` | Agente com human-in-the-loop |
+| `POST` | `/chats/{chat_id}/agent/hitl/resume` | Retomar com aprovação/feedback do HITL |
+| `POST` | `/chats/{chat_id}/agent/supervisor` | Supervisor multi-agente → **SSE** |
+| `POST` | `/chats/{chat_id}/multi-query` | Multi-query (subgraphs) → **SSE** |
 | `GET` | `/chats/{chat_id}/messages` | Histórico (paginado, ordem cronológica) |
 | `GET` | `/messages/{message_id}` | Detalhe da mensagem |
 | `DELETE` | `/messages/{message_id}` | Deletar mensagem |
+| `GET` | `/users/{user_id}/memory` | Listar memória de longo prazo do usuário |
+| `PUT` | `/users/{user_id}/memory` | Gravar item de memória de longo prazo |
+| `PATCH` | `/users/me/consent` | Conceder/revogar consentimento LGPD |
+| `GET` | `/users/me/data` | DSR de exportação (perfil + chats + mensagens + arquivos) |
+| `DELETE` | `/users/me` | DSR de apagamento (remove usuário + todos os dados) |
 | `POST` | `/chats/{chat_id}/files` | Upload de arquivo (202, vetoriza em background) |
 | `POST` | `/chats/{chat_id}/files/batch` | Upload de múltiplos arquivos (207) |
 | `GET` | `/chats/{chat_id}/files` | Listar arquivos (paginado) |
@@ -223,6 +267,39 @@ Cada usuário escolhe o modelo de LLM usado nas respostas do RAG (feature [F-022
 - **Voltar ao padrão**: `PATCH /users/me {"model": null}` → o usuário volta ao default (`OPENAI_CHAT_MODEL`, default `azure/gpt-5-mini`);
 - O modelo precisa pertencer à **allowlist** `ALLOWED_MODELS` (definida por env, **somente o operador** altera) — modelo fora da lista → `422`;
 - `POST /chats/{chat_id}/messages` revalida o modelo do usuário autenticado contra a allowlist a **cada request** (se o operador remover o modelo do env, a API usa o default, não quebra).
+
+### Guardrails, refiners e LGPD (F-061)
+
+Habilite por env (default desligado):
+
+```bash
+GUARDRAILS_ENABLED=true    # guardrails de entrada/saída
+REFINERS_ENABLED=true      # dedup + citação de fontes + mascaramento de PII
+BLOCKED_TOPICS=saúde mental,orientação jurídica   # tópicos proibidos
+REQUIRE_CONSENT=true       # exige consentimento LGPD antes do RAG
+```
+
+- **Guardrail de entrada**: pergunta com injeção de prompt, tópico proibido ou
+  dado pessoal (CPF/e-mail/telefone) é **bloqueada/mascarada** antes de chamar o
+  LLM → evento SSE `guardrail_blocked`.
+- **Guardrail de saída + refiners**: resposta vazia/nociva é bloqueada; resposta
+  é deduplicada, recebe **citação** `**Fontes:** [doc N]` e PII é mascarada.
+- **LGPD**: `POST /users` aceita `{"consent": true}`; `PATCH /users/me/consent`
+  concede/revoga; `GET /users/me/data` exporta os dados (DSR); `DELETE /users/me`
+  apaga o usuário e todos os dados (hard delete). Com `REQUIRE_CONSENT=true`, o
+  RAG responde `consent_required` até o usuário consentir.
+
+### MCP (F-062)
+
+Exponha as tools do RAG via Model Context Protocol (SDK Python `mcp`):
+
+```bash
+uv run python -m einstein_test.mcp                  # transporte stdio (default)
+uv run python -m einstein_test.mcp --transport http # streamable HTTP em :8001
+```
+
+Tools: `rag_search`, `fetch_document`, `get_memory`, `put_memory`, `list_chats`,
+`create_chat`. Multi-tenant por `chat_id`/`user_id` passados como argumento.
 
 ### Exemplo de fluxo completo
 
@@ -337,6 +414,14 @@ juiz), `--format md|html|json`. O `--backend real` vetoriza o corpus de
 verdade, roda o RAG real e **limpa** as linhas criadas no banco ao final; só
 roda em banco local sem `EVAL_ALLOW_NON_LOCAL=1`.
 
+**Publicar a avaliação no Langfuse (experimento, F-059):**
+```bash
+LANGFUSE_ENABLED=true \
+uv run python -m einstein_test.eval --backend langfuse --judge llm
+```
+Espelha o dataset gold em `einstein-rag-eval` e registra scores por item
+(veredito + `recall@5/12`, `MRR@5`, `hit@1`) nas traces do Langfuse.
+
 ### O que usa o sistema real vs. parametrizado
 - **Real**: embeddings, busca pgvector (KNN/HNSW), geração via LLM, storage.
 - **Parametrizado (ground truth)**: as perguntas/`expected_files`/`gold_answer`
@@ -395,6 +480,9 @@ Copie `.env.example` para `.env` e preencha:
 | `REFINERS_ENABLED` | `false` | Habilita refiners de resposta (dedup/citação/PII) |
 | `BLOCKED_TOPICS` | — | Tópicos proibidos (guardrail de política) |
 | `REQUIRE_CONSENT` | `false` | Exige consentimento LGPD antes do RAG |
+| `LANGFUSE_ENABLED` | `false` | Habilita tracing/avaliação no Langfuse |
+| `LANGFUSE_HOST` | `http://localhost:3000` | Endpoint do Langfuse (self-hosted) |
+| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | — | Credenciais do projeto no Langfuse |
 | `RATE_LIMIT_*` | vários | Limites por minuto (login, chats, messages, files, users, global) |
 
 ---
@@ -407,11 +495,14 @@ Copie `.env.example` para `.env` e preencha:
 │   ├── api/            # controllers FastAPI (auth, chats, messages, files)      → [README](src/einstein_test/api/README.md)
 │   ├── models/         # SQLAlchemy models (user, chat, message, file, chunk)   → [README](src/einstein_test/models/README.md)
 │   ├── repositories/   # acesso a dados (chat, message, file, user, sqlalchemy) → [README](src/einstein_test/repositories/README.md)
-│   ├── services/       # regras de negócio (... pagination, rag)                → [README](src/einstein_test/services/README.md)
+│   ├── services/       # regras de negócio (... pagination, rag, auth, user)    → [README](src/einstein_test/services/README.md)
 │   ├── schemas/        # Pydantic (requests/responses, Page[T])                 → [README](src/einstein_test/schemas/README.md)
 │   ├── storage/        # abstraction de object storage (MinIO/S3, in-memory)    → [README](src/einstein_test/storage/README.md)
 │   ├── tasks/          # Celery (vetorização em background)                      → [README](src/einstein_test/tasks/README.md)
 │   ├── vector/         # pgvector: repositório vetorial + similaridade (KNN/HNSW) → [README](src/einstein_test/vector/README.md)
+│   ├── guardrails/     # guardrails de entrada/saída do RAG (F-061)
+│   ├── refiners/       # pós-processamento da resposta: dedup/citação/PII (F-061)
+│   ├── mcp/            # servidor MCP expondo as tools do RAG (F-062)
 │   ├── middleware/     # rate limiting, logging                                  → [README](src/einstein_test/middleware/README.md)
 │   ├── eval/           # harness de avaliação do RAG (F-038)                     → [README](src/einstein_test/eval/README.md)
 │   └── db/             # Base declarativa, engine, session factory               → [README](src/einstein_test/db/README.md)
@@ -420,7 +511,7 @@ Copie `.env.example` para `.env` e preencha:
 ├── terraform/          # infra AWS (VPC, RDS, ElastiCache, S3, ECR, ECS, ALB, OIDC)
 ├── deploy/             # rollout ECS (script)
 ├── docker/             # entrypoint, initdb
-├── docs/features/      # documentação das features (F-001..F-038)
+├── docs/features/      # documentação das features (F-001..F-062)
 └── docs/insomnia/      # collection Insomnia com todos os endpoints da API
 ```
 
@@ -440,7 +531,12 @@ as features relacionadas.
 - **Autenticação JWT + bcrypt + rate limiting** por usuário/IP.
 - **Paginação padronizada** — envelope `Page[T]` em todos os list endpoints.
 - **Infra AWS 100% Terraform** — ECS Fargate (api + worker), RDS PostgreSQL 15.19, ElastiCache Redis 7, S3, ALB, VPC privada; deploy manual via GitHub Actions com **OIDC**.
-- **Provedores OpenAI-compatíveis + allowlist de modelos** por usuário.
+- **Provedores OpenAI-compatíveis + allowlist de modelos** por usuário, **incluindo modelos locais via Ollama** (`ollama/<modelo>` para LLM e `EMBEDDER=ollama` para embeddings, com zero-pad para `vector(1536)`).
+- **RAG com múltiplos modos** sobre LangGraph — agente react com tools, multi-query, supervisor multi-agente e human-in-the-loop (F-040 a F-053).
+- **Guardrails e refiners** como camada de segurança do RAG — injeção de prompt, PII, política e grounding na entrada; dedup, citação e mascaramento de PII na saída (F-061).
+- **LGPD como feature** — consentimento, DSR de exportação e apagamento (F-061).
+- **MCP (Model Context Protocol)** com SDK Python (`MCPServer`) expondo as tools do RAG, sem serviço Node (F-062).
+- **Observabilidade via Langfuse** — tracing dos graphs e avaliação (scores por trace + experimentos) (F-043, F-056, F-059).
 
 ---
 
@@ -478,14 +574,17 @@ Neste repo, as specs vivem em `.spec/`:
 .spec/
   constitution.md              # constituição + verificações executáveis
   lessons.md                   # lições com lastro em falhas reais
-  features/F-001..F-038/       # spec legível + critérios + plano + prova (um por feature)
+  features/F-001..F-059/       # spec legível + critérios + plano + prova (um por feature)
     spec.md                    # histórias, critérios de aceite, suposições
     criteria.reg               # máquina: AC-id → story → descrição → dono T-id
     trace.tsv                  # máquina: AC-id → comando de teste → sha
     state.tsv                  # máquina: T-id → status → branch → sha
 ```
 
-Todos os critérios das 38 features deste projeto são provados mecanicamente (475 testes), e nenhuma feature fecha com suposição/pergunta em aberto — o fluxo **bloqueia** avanço se a fase anterior não estiver `done`.
+Todos os critérios das features especificadas deste projeto são provados
+mecanicamente (643 testes no total), e nenhuma feature fecha com
+suposição/pergunta em aberto — o fluxo **bloqueia** avanço se a fase anterior
+não estiver `done`.
 
 | Garantia | Como |
 |---|---|
@@ -500,12 +599,23 @@ Todos os critérios das 38 features deste projeto são provados mecanicamente (4
 
 ## Documentação das features
 
-Cada feature (F-001..F-038) tem documentação própria em [`docs/features/`](docs/features/), incluindo:
+Cada feature (F-001..F-062) tem documentação própria em [`docs/features/`](docs/features/):
 
-- `F-011` — busca por similaridade (RAG) · `F-015` — Celery · `F-016` — rate limiting
-- `F-017` — índice HNSW · `F-026` — CI · `F-033` — infra local · `F-035` — infra AWS
-- `F-036` — paginação nos list endpoints · `F-037` — busca HNSW (candidate-pool + re-rank)
-- `F-038` — harness de avaliação do RAG (assertividade, retrieval, robustez, perf)
+- **F-001..F-010** — infra local, migrations, testes, modelos/repositórios, serviços
+  e upload/vetorização de arquivos.
+- **F-011..F-030** — RAG LangGraph, auth, streaming, pool, jobs, rate limit, índice
+  HNSW, CI, Docker, cobertura e multi-worker.
+- **F-031..F-038** — refactor de camadas, infra boot, validação, infra AWS, paginação,
+  busca HNSW e **harness de avaliação do RAG**.
+- **F-039..F-053** — LangGraph avançado: memória de conversa, agente react, HITL,
+  multi-query, Langfuse, streaming, memória de longo prazo, sumarização,
+  supervisor e retry/robustez.
+- **F-054..F-058** — avaliação LLM-as-judge (RAGAS), streaming rico, tracing Langfuse
+  e memória gerenciada.
+- **F-059** — avaliação do RAG via Langfuse (scores por trace + experimentos)
+- **F-060** — modelos locais via Ollama (LLM + embeddings)
+- **F-061** — guardrails, refiners e LGPD
+- **F-062** — MCP (Model Context Protocol)
 
 ---
 
