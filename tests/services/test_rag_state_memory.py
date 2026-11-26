@@ -6,7 +6,6 @@ O checkpointer é injetável: nos testes determinísticos (SQLite) usa-se um
 
 from typing import get_type_hints
 
-import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 

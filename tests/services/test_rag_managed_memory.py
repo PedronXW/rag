@@ -29,7 +29,6 @@ def test_graph_aceita_store_gerenciado(memory_store):
 def test_no_memoria_recupera_do_store(memory_store):
     """AC-002: o nó de memória recupera a memória do usuário e inclui no estado."""
     from langchain_core.messages import HumanMessage
-    from langgraph.checkpoint.memory import MemorySaver
 
     from einstein_test.services.rag.longterm import put_memory
     from einstein_test.services.rag.managed import memory_node

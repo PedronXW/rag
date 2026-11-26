@@ -105,8 +105,6 @@ def test_partial_files_emite_notice(client):
     """AC-002: arquivos parciais (pending) emitem notice partial_files."""
     import sqlalchemy as sa
 
-    from einstein_test.models.file import File
-    from einstein_test.models.file_chunk import FileChunk
 
     c, engine = client
     h = _auth(c)

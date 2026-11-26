@@ -7,7 +7,7 @@ produção, pode ser um `BaseChatModel` do langchain ou uma integração RAGAS.
 
 import argparse
 import sys
-from typing import Any, Callable, Protocol
+from typing import Callable, Protocol
 
 from einstein_test.services.rag.graph import build_graph
 

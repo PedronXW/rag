@@ -1,6 +1,5 @@
 """J-002 — Testes do IsLastStep real e build_prompt unificado."""
 
-import pytest
 
 
 def test_summary_node_usa_is_last_step():
@@ -53,7 +52,6 @@ def test_build_prompt_unico_com_resumo():
 def test_summary_reutiliza_build_prompt():
     """AC-002: summary usa o build_prompt do graph (sem divergência)."""
     from einstein_test.services.rag import summary
-    from einstein_test.services.rag.graph import build_prompt
 
     import inspect
 

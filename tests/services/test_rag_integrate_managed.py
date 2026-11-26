@@ -14,7 +14,6 @@ def test_ragservice_usa_memoria_gerenciada():
 
 def test_managed_usado_no_fluxo():
     """AC-002: managed.memory_node/build_graph_with_memory_store são usados pelo RagService."""
-    import einstein_test.services.rag.service as service
     import einstein_test.services.rag.managed as managed
 
     # o módulo managed é importável e expõe as APIs (integradas via service/_with_memory)

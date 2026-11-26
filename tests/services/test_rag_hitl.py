@@ -1,7 +1,6 @@
 """G-003 — Testes do human-in-the-loop (interrupt + resume) no graph RAG."""
 
-import pytest
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
 

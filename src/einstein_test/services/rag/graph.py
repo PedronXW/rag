@@ -7,8 +7,7 @@ conversa por `thread_id = chat_id`.
 """
 
 import asyncio
-from operator import add
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph import MessagesState, StateGraph

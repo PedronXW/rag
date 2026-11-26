@@ -1,6 +1,5 @@
 """H-001 — Testes do trim_messages e streaming token-real (AC-001..AC-005)."""
 
-import pytest
 from langchain_core.messages import HumanMessage
 
 
@@ -60,7 +59,6 @@ def test_sse_preserva_eventos():
 
 def test_sources_preenchidas_quando_ha_chunks():
     """AC-003: sources não ficam vazias quando o retriever devolve chunks."""
-    import pytest as _pt
     from langchain_core.messages import HumanMessage
     from langgraph.checkpoint.memory import MemorySaver
 

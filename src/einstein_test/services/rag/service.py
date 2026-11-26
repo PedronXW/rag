@@ -13,8 +13,6 @@ from langchain_core.messages import HumanMessage
 from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential
 
 from einstein_test.services.rag.graph import (
-    build_graph,
-    build_graph_async,
     build_graph_with_state,
     build_prompt,
 )
@@ -180,7 +178,6 @@ class RagService:
         loop. Com `rich=True`, usa `astream_events` (rich_stream). Yields
         dicts: {"kind": "node"|"token"|"done", ...}.
         """
-        sources: list[Any] = []
         history = self._with_summary(history)
         history = self._with_memory(history, user_id)
         streamer = self._astream_rich if rich else self._astream_events
@@ -196,13 +193,9 @@ class RagService:
                     async_=True, checkpointer=cp,
                 )
                 async for ev in streamer(graph, question, history, chat_id):
-                    if ev["kind"] == "done":
-                        sources = ev["sources"]
                     yield ev
         else:
             async for ev in streamer(self.graph_async, question, history, chat_id):
-                if ev["kind"] == "done":
-                    sources = ev["sources"]
                 yield ev
 
     async def _astream_events(self, graph, question, history, chat_id) -> AsyncIterator[dict]:
@@ -236,7 +229,6 @@ class RagService:
         Roda o graph uma única vez via `astream_events`.
         """
         from einstein_test.services.rag.callbacks import graph_config
-        from einstein_test.services.rag.rich_stream import node_events, token_events
 
         kwargs = {
             "question": question,

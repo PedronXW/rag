@@ -1,8 +1,5 @@
 """I-001 — Testes do InjectedToolArg nas tools do RAG."""
 
-import pytest
-from langchain_core.tools import InjectedToolArg
-from typing import Annotated
 
 
 class _Chunk:

@@ -1,6 +1,5 @@
 """H-004 — Testes do create_react_agent e supervisor multi-agente."""
 
-import pytest
 from langchain_core.messages import AIMessage
 
 

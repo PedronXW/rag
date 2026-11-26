@@ -1,6 +1,5 @@
 """H-003 — Testes da sumarização de conversa (SummaryMessage + IsLastStep)."""
 
-import pytest
 from langchain_core.messages import HumanMessage
 
 
@@ -92,7 +91,6 @@ def test_is_last_step_usado():
 
 def test_with_summary_no_fluxo_real():
     """AC-001/002: o fluxo real gera resumo quando o histórico excede."""
-    from langchain_core.messages import HumanMessage
 
     from einstein_test.services.rag.service import RagService
 

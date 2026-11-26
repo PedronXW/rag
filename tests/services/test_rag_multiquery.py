@@ -1,6 +1,5 @@
 """G-004 — Testes do multi-query com subgraphs (Send) e fusão."""
 
-import pytest
 from langgraph.types import Send
 
 

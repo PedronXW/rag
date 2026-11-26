@@ -1,6 +1,5 @@
 """I-006 — Testes da avaliação LLM-as-judge (RAGAS)."""
 
-import pytest
 
 
 class _JudgeLLM:

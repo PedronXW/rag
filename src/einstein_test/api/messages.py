@@ -1,6 +1,7 @@
 """Endpoints REST de message."""
 
 import json
+from typing import Any
 from collections.abc import AsyncIterator
 from functools import lru_cache
 
@@ -360,7 +361,7 @@ async def create_agent_answer(
         tools_called: list[str] = []
         answer = ""
         try:
-            user_message = await run_in_threadpool(
+            await run_in_threadpool(
                 message_service.create_message,
                 chat_id=chat_id,
                 content=payload.content,
@@ -406,7 +407,6 @@ def _hitl_checkpointer():
         from einstein_test.services.rag.checkpointer import build_postgres_checkpointer
 
         return build_postgres_checkpointer()
-    from langgraph.checkpoint.memory import MemorySaver
 
     return _hitl_memory_saver()
 
@@ -611,7 +611,7 @@ async def create_multi_query_answer(
             chat_id=chat_id,
         )
         try:
-            user_message = await run_in_threadpool(
+            await run_in_threadpool(
                 message_service.create_message,
                 chat_id=chat_id,
                 content=payload.content,
@@ -685,7 +685,7 @@ async def create_supervisor_answer(
             chat_id=chat_id,
         )
         try:
-            user_message = await run_in_threadpool(
+            await run_in_threadpool(
                 message_service.create_message,
                 chat_id=chat_id,
                 content=payload.content,

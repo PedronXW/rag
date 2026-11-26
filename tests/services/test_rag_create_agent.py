@@ -1,6 +1,5 @@
 """I-004 — Testes da migração create_react_agent → create_agent."""
 
-import pytest
 
 
 def test_langchain_dependencia():

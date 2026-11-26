@@ -1,6 +1,5 @@
 """I-003 — Testes do streaming rico com astream_events."""
 
-import pytest
 
 
 class _Ret:

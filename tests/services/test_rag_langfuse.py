@@ -1,6 +1,5 @@
 """G-005 — Testes da observabilidade Langfuse (AC-001..AC-004)."""
 
-import pytest
 import yaml
 from pathlib import Path
 

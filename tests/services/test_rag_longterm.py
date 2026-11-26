@@ -120,7 +120,6 @@ def test_api_put_get_memory(client):
 
 def test_graph_inclui_memoria_no_prompt(memory_store):
     """AC-005: o graph recupera a memória e a inclui no prompt."""
-    from langchain_core.messages import HumanMessage
     from langgraph.checkpoint.memory import MemorySaver
 
     from einstein_test.services.rag.longterm import put_memory

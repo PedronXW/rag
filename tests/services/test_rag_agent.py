@@ -1,6 +1,5 @@
 """G-002 — Testes do agente react com tools (ToolNode + Command)."""
 
-import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
 

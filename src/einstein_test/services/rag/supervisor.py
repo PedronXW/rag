@@ -6,9 +6,8 @@ StateGraph com nó de roteamento e consolidação.
 """
 
 from langgraph.graph import END, START, StateGraph
-from typing import Any, TypedDict
+from typing import TypedDict
 
-from einstein_test.services.rag.agent import build_tools
 
 
 class SupervisorState(TypedDict):
