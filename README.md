@@ -368,11 +368,15 @@ Copie `.env.example` para `.env` e preencha:
 
 | Variável | Default | Descrição |
 |---|---|---|
-| `OPENAI_API_KEY` | — | **Obrigatória.** Chave do endpoint OpenAI-compatível |
+| `OPENAI_API_KEY` | — | Chave do endpoint OpenAI-compatível (não exigida quando há modelos `ollama/` em `ALLOWED_MODELS`) |
 | `OPENAI_BASE_URL` | `https://spillway.ensinoeinstein.com/openai/v1` | Base URL do embedder/LLM |
 | `OPENAI_MODEL` | `cohere/embed-v4.0` | Modelo de embedding (1536 dims) |
 | `OPENAI_EMBEDDING_DIM` | `1536` | Dimensão do embedding |
 | `OPENAI_CHAT_MODEL` | `azure/gpt-5-mini` | Modelo de chat do RAG |
+| `OLLAMA_BASE_URL` | `http://localhost:11434/v1` | Endpoint OpenAI-compatível do Ollama (modelos locais) |
+| `OLLAMA_CHAT_MODEL` | `llama3.2` | Modelo default quando `ollama/` é usado |
+| `EMBEDDER` | `openai` | `openai` (gateway) ou `ollama` (embeddings 100% local, zero-pad para `vector(1536)`) |
+| `OLLAMA_EMBED_MODEL` | `nomic-embed-text` | Modelo de embedding local (768 dims, via Ollama) |
 | `JWT_SECRET` | — | **Obrigatória.** Segredo JWT |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Validade do token |
 | `DATABASE_POOL_SIZE` | `10` | Pool de conexões do Postgres |
@@ -386,7 +390,7 @@ Copie `.env.example` para `.env` e preencha:
 | `VECTORIZE_RETRY_BACKOFF` | `2` | Backoff exponencial (s) |
 | `LLM_MAX_RETRIES` | `2` | Retries do LLM antes do 1º token |
 | `LLM_RETRY_BACKOFF` | `1` | Backoff do LLM (s) |
-| `ALLOWED_MODELS` | `azure/gpt-5-mini,azure/gpt-6-luna` | Modelos de LLM permitidos por usuário |
+| `ALLOWED_MODELS` | `azure/gpt-5-mini,azure/gpt-6-luna` | Modelos de LLM permitidos por usuário (use prefixo `ollama/` para modelos locais) |
 | `RATE_LIMIT_*` | vários | Limites por minuto (login, chats, messages, files, users, global) |
 
 ---

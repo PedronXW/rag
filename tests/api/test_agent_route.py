@@ -85,3 +85,40 @@ def test_ac005_agent_rota_responde_sse(client):
     assert "[DONE]" in resp.text
     assert "event: error" not in resp.text
     assert "answer" in resp.text
+
+
+def test_rotas_rag_usam_modelo_do_usuario(client, monkeypatch):
+    """As rotas RAG propagam o modelo escolhido pelo usuário (F-022).
+
+    Regressão: /agent, /multi-query e /agent/supervisor agora passam o modelo do
+    usuário ao `_rag_service` (antes usavam o default do ambiente).
+    """
+    c, engine = client
+    h = _auth(c)
+    r = c.patch("/users/me", json={"model": "azure/gpt-6-luna"}, headers=h)
+    assert r.status_code == 200
+
+    import einstein_test.api.messages as messages_module
+
+    original = messages_module._rag_service
+    calls: list[str | None] = []
+
+    def _spy(session, model=None):
+        calls.append(model)
+        return original(session, model)
+
+    monkeypatch.setattr(messages_module, "_rag_service", _spy)
+
+    chat = _chat(c, h)
+    seed_ready_file(engine, chat["id"])
+    for path in ("/messages", "/agent", "/multi-query", "/agent/supervisor"):
+        resp = c.post(
+            f"/chats/{chat['id']}{path}",
+            json={"content": "pergunta"},
+            headers={**h, "Accept": "text/event-stream"},
+        )
+        assert resp.status_code == 200, path
+        assert "event: error" not in resp.text, path
+
+    assert len(calls) >= 4, calls
+    assert all(m == "azure/gpt-6-luna" for m in calls), calls

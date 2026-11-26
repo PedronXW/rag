@@ -43,6 +43,9 @@ class Settings:
     allowed_models: list[str] = field(
         default_factory=lambda: ["azure/gpt-5-mini", "azure/gpt-6-luna"]
     )
+    # ollama (modelos locais)
+    ollama_base_url: str = "http://localhost:11434/v1"
+    ollama_chat_model: str = "llama3.2"
     llm_max_retries: int = 2
     llm_retry_backoff: float = 1.0
     # logging
@@ -100,6 +103,8 @@ def _build_settings() -> Settings:
         openai_base_url=_env("OPENAI_BASE_URL", "https://spillway.ensinoeinstein.com/openai/v1"),
         openai_chat_model=_env("OPENAI_CHAT_MODEL", "azure/gpt-5-mini"),
         allowed_models=_env_list("ALLOWED_MODELS", ["azure/gpt-5-mini", "azure/gpt-6-luna"]),
+        ollama_base_url=_env("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+        ollama_chat_model=_env("OLLAMA_CHAT_MODEL", "llama3.2"),
         llm_max_retries=_env_int("LLM_MAX_RETRIES", 2),
         llm_retry_backoff=_env_float("LLM_RETRY_BACKOFF", 1.0),
         log_level=_env("LOG_LEVEL", "INFO"),
@@ -134,7 +139,9 @@ def validate_settings(s: Settings | None = None) -> None:
     problems: list[str] = []
     if not s.jwt_secret:
         problems.append("JWT_SECRET: obrigatório (gere com openssl rand -hex 32)")
-    if not s.openai_api_key:
+    # OPENAI_API_KEY só é obrigatória quando não há modelos locais (ollama).
+    has_ollama = any(m.startswith("ollama/") for m in s.allowed_models)
+    if not s.openai_api_key and not has_ollama:
         problems.append("OPENAI_API_KEY: obrigatória")
     if not s.allowed_models:
         problems.append("ALLOWED_MODELS: ao menos um modelo")

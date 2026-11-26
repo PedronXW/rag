@@ -13,8 +13,11 @@ from einstein_test.services.rag.llm import (
     LLM_RETRY_BACKOFF,
     ChatLLM,
     ChatOpenAIAdapter,
+    ChatOllamaAdapter,
     FakeChatLLM,
     allowed_models,
+    build_chat_llm,
+    is_ollama_model,
 )
 from einstein_test.services.rag.graph import (
     build_graph,
@@ -32,6 +35,9 @@ __all__ = [
     "ChatLLM",
     "FakeChatLLM",
     "ChatOpenAIAdapter",
+    "ChatOllamaAdapter",
+    "build_chat_llm",
+    "is_ollama_model",
     "RagService",
     "build_graph",
     "build_graph_async",

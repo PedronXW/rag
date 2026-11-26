@@ -258,7 +258,8 @@ async def create_agent_answer(
 
     from einstein_test.services.rag.agent import agent_config, build_agent_graph
 
-    rag = _rag_service(session)
+    user_model = UserService(UserRepositorySQLAlchemy(session)).resolve_model(current_user)
+    rag = _rag_service(session, user_model)
     llm = rag.llm
     message_service = _message_service(session)
 
@@ -349,7 +350,8 @@ async def create_agent_hitl(
 
     from einstein_test.services.rag.hitl import build_hitl_graph, hitl_config
 
-    rag = _rag_service(session)
+    user_model = UserService(UserRepositorySQLAlchemy(session)).resolve_model(current_user)
+    rag = _rag_service(session, user_model)
     message_service = _message_service(session)
     await run_in_threadpool(
         message_service.create_message,
@@ -394,7 +396,8 @@ async def resume_agent_hitl(
 
     from einstein_test.services.rag.hitl import build_hitl_graph, hitl_config
 
-    rag = _rag_service(session)
+    user_model = UserService(UserRepositorySQLAlchemy(session)).resolve_model(current_user)
+    rag = _rag_service(session, user_model)
     checkpointer = await run_in_threadpool(_hitl_checkpointer)
     graph = build_hitl_graph(
         llm=rag.llm,
@@ -497,7 +500,8 @@ async def create_multi_query_answer(
 
     from einstein_test.services.rag.multiquery import build_multiquery_graph, multi_config
 
-    rag = _rag_service(session)
+    user_model = UserService(UserRepositorySQLAlchemy(session)).resolve_model(current_user)
+    rag = _rag_service(session, user_model)
     message_service = _message_service(session)
 
     async def _stream() -> AsyncIterator[str]:
@@ -564,7 +568,8 @@ async def create_supervisor_answer(
 
     from einstein_test.services.rag.supervisor import build_supervisor, supervisor_config
 
-    rag = _rag_service(session)
+    user_model = UserService(UserRepositorySQLAlchemy(session)).resolve_model(current_user)
+    rag = _rag_service(session, user_model)
     message_service = _message_service(session)
 
     async def _stream() -> AsyncIterator[str]:

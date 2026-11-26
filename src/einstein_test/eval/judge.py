@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
-from einstein_test.services.rag.llm import ChatLLM, ChatOpenAIAdapter
+from einstein_test.services.rag.llm import ChatLLM, build_chat_llm
 
 EVAL_JUDGE_MODEL = os.getenv("EVAL_JUDGE_MODEL", "azure/gpt-6-luna")
 
@@ -109,7 +109,7 @@ class LLMJudge:
     """Juiz via LLM (ChatOpenAIAdapter) com rubric; parse do JSON retornado."""
 
     def __init__(self, llm: ChatLLM | None = None, model: str | None = None) -> None:
-        self._llm: ChatLLM = llm or ChatOpenAIAdapter(model=model or EVAL_JUDGE_MODEL)
+        self._llm: ChatLLM = llm or build_chat_llm(model=model or EVAL_JUDGE_MODEL)
 
     def judge(
         self,

@@ -21,9 +21,10 @@ from einstein_test.services.rag.graph import (
 from einstein_test.services.rag.llm import (
     LLM_MAX_RETRIES,
     LLM_RETRY_BACKOFF,
-    ChatOpenAIAdapter,
     ChatLLM,
+    ChatOpenAIAdapter,
     _is_transient,
+    build_chat_llm,
 )
 from einstein_test.vector import Embedder, get_embedder
 from einstein_test.vector.repository import VectorRepository
@@ -293,9 +294,11 @@ def get_rag_service(
 ) -> RagService:
     """Retorna o serviço RAG para o retriever da sessão atual.
 
-    O `ChatOpenAIAdapter` é criado **por usuário** com o `model` escolhido (ou
-    o default do ambiente quando `model` é None) — não há mais singleton do
-    LLM. O `Embedder` permanece compartilhado (client HTTP de embeddings).
+    O adapter de LLM é criado **por usuário** com o `model` escolhido (ou o
+    default do ambiente quando `model` é None) — não há mais singleton do LLM.
+    Modelos `ollama/<nome>` usam o `ChatOllamaAdapter` (local); os demais usam o
+    adapter OpenAI-compatível. O `Embedder` permanece compartilhado (client HTTP
+    de embeddings).
     """
     global _shared_embedder
     if _rag_factory is not None:
@@ -304,7 +307,7 @@ def get_rag_service(
     if _shared_embedder is None:
         _shared_embedder = get_embedder()
     return RagService(
-        llm=ChatOpenAIAdapter(model=model),
+        llm=build_chat_llm(model=model),
         retriever=retriever,
         embedder=_shared_embedder,
     )
