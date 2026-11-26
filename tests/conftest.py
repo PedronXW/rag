@@ -22,6 +22,9 @@ def _jwt_secret(monkeypatch):
     monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-teste")
     monkeypatch.setenv("ALLOWED_MODELS", "azure/gpt-5-mini,azure/gpt-6-luna")
+    # banco NÃO-postgres por padrão nos testes: _is_postgres()/checkpointer não
+    # tentam abrir pool de Postgres (determinístico no CI, sem serviço de banco).
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
     # observabilidade Langfuse desligada por padrão nos testes (determinístico)
     monkeypatch.setenv("LANGFUSE_ENABLED", "false")
     # guardrails/refiners/LGPD desligados por padrão nos testes — os testes que

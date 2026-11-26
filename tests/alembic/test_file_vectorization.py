@@ -18,7 +18,10 @@ DEFAULT_DATABASE_URL = "postgresql://einstein:einstein@localhost:5432/einstein"
 @pytest.fixture
 def alembic_env() -> dict[str, str]:
     env = dict(os.environ)
-    env.setdefault("DATABASE_URL", DEFAULT_DATABASE_URL)
+    # `alembic upgrade head --sql` é offline (não conecta); a URL postgres é
+    # necessária só para gerar o SQL pgvector corretamente — independente do
+    # DATABASE_URL herdado do conftest (sqlite nos testes de unidade).
+    env["DATABASE_URL"] = DEFAULT_DATABASE_URL
     return env
 
 

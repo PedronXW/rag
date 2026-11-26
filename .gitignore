@@ -11,3 +11,8 @@ wheels/
 
 # Configuração local (nunca versionar)
 .env
+
+# Artefatos de teste/cobertura
+.coverage
+htmlcov/
+reports/
