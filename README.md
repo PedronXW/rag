@@ -73,11 +73,11 @@ flowchart LR
     W <-->|chunks + embeddings| P
     W <-->|arquivos| S[(MinIO / S3)]
     A <-->|broker/result| R[(Redis)]
-    A -->|embeddings| E[Embedder OpenAI-compatível ou Ollama]
-    A -->|prompt + contexto| L[LLM OpenAI-compatível ou Ollama]
-    A -->|tools RAG| MCP[MCP server (stdio/http)]
-    A -->|guardrails/refiners| G[Guardrails + Refiners]
-    A -->|traces + scores| LF[Langfuse]
+    A -->|embeddings| E["Embedder OpenAI ou Ollama"]
+    A -->|prompt + contexto| L["LLM OpenAI ou Ollama"]
+    A -->|tools RAG| MCP["MCP server stdio ou http"]
+    A -->|guardrails/refiners| G["Guardrails e Refiners"]
+    A -->|traces e scores| LF["Langfuse"]
 ```
 
 **Fluxo do RAG**
