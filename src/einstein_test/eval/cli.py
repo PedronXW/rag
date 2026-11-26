@@ -4,10 +4,14 @@ Uso:
   uv run python -m einstein_test.eval --backend fake --limit 2 --format md
   uv run python -m einstein_test.eval --backend real --judge llm \
       --format html --out eval/reports/latest.html
+  uv run python -m einstein_test.eval --backend langfuse --judge llm
 
 `--backend fake` é determinístico (fakes, sem chave) — smoke/CI.
 `--backend real` usa banco + embedder + RAG reais (requer OPENAI_API_KEY e
 infra) e é opt-in.
+`--backend langfuse` usa o ambiente real e roda um experimento Langfuse
+(dataset + task + evaluators), registrando scores no trace de cada item
+(requer LANGFUSE_ENABLED=true + infra do Langfuse).
 """
 
 from __future__ import annotations
@@ -15,6 +19,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+from contextlib import contextmanager
 from pathlib import Path
 
 from einstein_test.eval.dataset import EvalQuestion, load_dataset
@@ -25,12 +30,13 @@ from einstein_test.eval.runner import run_eval
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATASET = PROJECT_ROOT / "eval" / "dataset" / "dev.jsonl"
 DEFAULT_CORPUS = PROJECT_ROOT / "eval" / "corpus"
+DATASET_NAME = os.getenv("EVAL_DATASET_NAME", "einstein-rag-eval")
 
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="eval", description="Harness de avaliação do RAG")
     p.add_argument("--stage", choices=["retrieval", "generation", "full"], default="full")
-    p.add_argument("--backend", choices=["fake", "real"], default="fake")
+    p.add_argument("--backend", choices=["fake", "real", "langfuse"], default="fake")
     p.add_argument("--judge", choices=["fake", "llm"], default="fake")
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
@@ -73,7 +79,13 @@ def _run_fake(questions: list[EvalQuestion], judge, limit: int | None):
     )
 
 
-def _run_real(questions: list[EvalQuestion], judge, corpus_dir: Path, limit: int | None):
+@contextmanager
+def _real_env(questions: list[EvalQuestion], corpus_dir: Path):
+    """Ambiente real de avaliação: usuário + chats + ingestão dos arquivos.
+
+    Yield `(search_fn, answer_fn, file_id_of, embedder)` e faz hard-delete das
+    linhas criadas no banco ao final (chunks/files/chats/user).
+    """
     import asyncio
     import uuid
 
@@ -90,7 +102,6 @@ def _run_real(questions: list[EvalQuestion], judge, corpus_dir: Path, limit: int
     from einstein_test.services.file import FileService
     from einstein_test.services.rag.service import get_rag_service
     from einstein_test.vector import VectorRepositorySQLAlchemy, get_embedder
-    from einstein_test.vector.similarity import cosine_similarity
 
     engine = create_engine_from_config()
     configure_session_factory(engine)
@@ -99,8 +110,6 @@ def _run_real(questions: list[EvalQuestion], judge, corpus_dir: Path, limit: int
     # fecha o loop e quebra o cliente async do LLM (httpx) com
     # "RuntimeError: Event loop is closed".
     loop = asyncio.new_event_loop()
-    if limit is not None:
-        questions = questions[:limit]
 
     with Session(engine) as s:
         user = User(
@@ -133,11 +142,11 @@ def _run_real(questions: list[EvalQuestion], judge, corpus_dir: Path, limit: int
             s.query(User).filter(User.id == user_id).delete(synchronize_session=False)
             s.commit()
 
+    envs: dict[str, tuple[int, dict[str, int]]] = {}
     try:
         # Um chat por pergunta: ingere os docs de `expected_files` (create_file
         # já extrai/chunka/embed quando o vector_repository é fornecido) e
         # guarda o mapeamento nome -> file_id.
-        envs: dict[str, tuple[int, dict[str, int]]] = {}
         for q in questions:
             with Session(engine) as s:
                 chat = ChatService(ChatRepositorySQLAlchemy(s)).create_chat(
@@ -197,6 +206,20 @@ def _run_real(questions: list[EvalQuestion], judge, corpus_dir: Path, limit: int
             res = loop.run_until_complete(_call())
             return res.answer, res.context, res.ttft, res.latency
 
+        yield search_fn, answer_fn, file_id_of, embedder
+    finally:
+        _cleanup()
+        if not loop.is_closed():
+            loop.close()
+
+
+def _run_real(questions: list[EvalQuestion], judge, corpus_dir: Path, limit: int | None):
+    if limit is not None:
+        questions = questions[:limit]
+
+    from einstein_test.vector.similarity import cosine_similarity
+
+    with _real_env(questions, corpus_dir) as (search_fn, answer_fn, file_id_of, embedder):
         def similarity_fn(answer: str, gold: str) -> float:
             if not gold:
                 return 0.0
@@ -213,10 +236,73 @@ def _run_real(questions: list[EvalQuestion], judge, corpus_dir: Path, limit: int
             file_id_of=file_id_of,
             limit=None,
         )
-    finally:
-        _cleanup()
-        if not loop.is_closed():
-            loop.close()
+
+
+def _run_langfuse(questions: list[EvalQuestion], judge, corpus_dir: Path, limit: int | None):
+    """Backend Langfuse: push do dataset + run_experiment (task = RAG real).
+
+    O task retorna a resposta/contexto/perf do RAG e as métricas de retrieval;
+    os evaluators convertem isso em scores Langfuse por item do experimento.
+    """
+    from einstein_test.eval.metrics import hit_rate_at_1, mrr_at_k, recall_at_k
+    from einstein_test.services.rag.eval_langfuse import (
+        make_retrieval_evaluator,
+        make_verdict_evaluator,
+        push_dataset,
+        run_experiment,
+    )
+
+    if limit is not None:
+        questions = questions[:limit]
+
+    with _real_env(questions, corpus_dir) as (search_fn, answer_fn, file_id_of, embedder):
+        def task(*, item, **kwargs):
+            meta = item.get("metadata") or {}
+            q = EvalQuestion(
+                id=meta.get("id", ""),
+                question=item["input"],
+                expected_files=tuple(meta.get("expected_files", [])),
+                gold_answer=item.get("expected_output") or "",
+                domain=meta.get("domain", "synthetic"),
+                edge=meta.get("edge", ""),
+            )
+            ranked = search_fn(q)
+            answer, context, ttft, latency = answer_fn(q)
+            expected = {file_id_of(q, name) for name in q.expected_files}
+            return {
+                "answer": answer,
+                "context": context,
+                "ttft": ttft,
+                "latency": latency,
+                "retrieval": {
+                    "recall@5": recall_at_k(ranked, expected, 5),
+                    "recall@12": recall_at_k(ranked, expected, 12),
+                    "mrr@5": mrr_at_k(ranked, expected, 5),
+                    "hit@1": hit_rate_at_1(ranked, expected),
+                },
+            }
+
+        data = [
+            {
+                "input": q.question,
+                "expected_output": q.gold_answer,
+                "metadata": {
+                    "id": q.id,
+                    "expected_files": list(q.expected_files),
+                    "domain": q.domain,
+                    "edge": q.edge,
+                },
+            }
+            for q in questions
+        ]
+
+        push_dataset(name=DATASET_NAME, questions=questions)
+        return run_experiment(
+            name=DATASET_NAME,
+            data=data,
+            task=task,
+            evaluators=[make_verdict_evaluator(judge), make_retrieval_evaluator()],
+        )
 
 
 def _db_host() -> str:
@@ -237,17 +323,30 @@ def main(argv: list[str] | None = None) -> int:
     if not questions:
         print("dataset vazio")
         return 1
-    if args.backend == "real":
+    if args.backend in ("real", "langfuse"):
         host = _db_host()
         if host not in ("localhost", "127.0.0.1", "sqlite") and os.getenv("EVAL_ALLOW_NON_LOCAL") != "1":
             print(
-                "--backend real só roda contra banco local "
+                f"--backend {args.backend} só roda contra banco local "
                 "(localhost/127.0.0.1/sqlite); defina EVAL_ALLOW_NON_LOCAL=1 "
                 "para liberar outro host"
             )
             return 1
+    if args.backend == "langfuse":
+        from einstein_test.services.rag.eval_langfuse import langfuse_eval_enabled
+
+        if not langfuse_eval_enabled():
+            print(
+                "--backend langfuse requer LANGFUSE_ENABLED=true "
+                "(e a infra do Langfuse, ver docker-compose)"
+            )
+            return 1
     judge = _build_judge(args.judge)
 
+    if args.backend == "langfuse":
+        result = _run_langfuse(questions, judge, args.corpus, args.limit)
+        print(f"experimento Langfuse '{DATASET_NAME}' concluído: {result}")
+        return 0
     if args.backend == "real":
         report = _run_real(questions, judge, args.corpus, args.limit)
     else:

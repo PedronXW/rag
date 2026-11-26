@@ -30,6 +30,9 @@ jobs:
       - name: Test (unitários + specs, sem integração)
         run: uv run pytest -m "not integration" -q --junitxml=reports/junit.xml --cov=einstein_test --cov-report=term --cov-report=html:htmlcov --cov-fail-under=70
 
+      - name: Smoke eval RAG (harness fake, sem chave)
+        run: uv run python -m einstein_test.eval --backend fake --limit 5 --format json
+
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
