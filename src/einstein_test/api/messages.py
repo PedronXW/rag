@@ -33,6 +33,7 @@ from einstein_test.services.pagination import (
     MIN_PAGE,
 )
 from einstein_test.services.rag import RagService, get_rag_service
+from einstein_test.services.rag.graph import _refine_answer
 from einstein_test.services.user import UserService
 from einstein_test.vector import VectorRepositorySQLAlchemy
 
@@ -98,6 +99,74 @@ def _sse_event(data: str, *, event: str | None = None) -> str:
     return f"data: {encoded}\n\n"
 
 
+def _input_guardrail(content: str):
+    """Roda o pipeline de guardrails de entrada (gated por GUARDRAILS_ENABLED).
+
+    Retorna o `GuardrailResult`; com guardrails desabilitados (default) retorna
+    sempre `allowed`. Usado pelas rotas RAG antes de chamar o LLM.
+    """
+    from einstein_test.guardrails.base import GuardAction
+    from einstein_test.guardrails.input_guardrails import build_input_pipeline
+    from einstein_test.settings import get_settings
+
+    cfg = get_settings()
+    pipeline = build_input_pipeline(
+        enabled=cfg.guardrails_enabled, blocked_topics=cfg.blocked_topics
+    )
+    result = pipeline.run(content)
+    if result.action == GuardAction.block or not result.allowed:
+        return result
+    return result
+
+
+def _consent_required() -> bool:
+    """True se REQUIRE_CONSENT=true e o usuário ainda não consentiu."""
+    from einstein_test.settings import get_settings
+
+    return get_settings().require_consent
+
+
+def _consent_notice() -> str:
+    return _sse_event(
+        {
+            "code": "consent_required",
+            "message": "consentimento de processamento de dados não concedido (LGPD)",
+        },
+        event="notice",
+    )
+
+
+def _consent_blocked_response() -> StreamingResponse:
+    def _stream() -> AsyncIterator[str]:
+        yield _consent_notice()
+        yield _sse_event("[DONE]")
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _guardrail_blocked_response(result) -> StreamingResponse:
+    """SSE de bloqueio por guardrail (sem chamar o LLM, sem persistir)."""
+    data = {
+        "code": "guardrail_blocked",
+        "message": result.reason or "conteúdo bloqueado por guardrail",
+        "guard": result.guard,
+    }
+
+    def _stream() -> AsyncIterator[str]:
+        yield _sse_event(data, event="notice")
+        yield _sse_event("[DONE]")
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.post("/chats/{chat_id}/messages")
 async def create_message(
     chat_id: int,
@@ -106,6 +175,11 @@ async def create_message(
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
     request_id = current_request_id()
+    guard_result = _input_guardrail(payload.content)
+    if not guard_result.allowed:
+        return _guardrail_blocked_response(guard_result)
+    if _consent_required() and not current_user.consent_granted:
+        return _consent_blocked_response()
     user_model = UserService(UserRepositorySQLAlchemy(session)).resolve_model(current_user)
     try:
         await run_in_threadpool(_ensure_chat_owned, session, chat_id, current_user.id)
@@ -207,7 +281,9 @@ async def create_message(
                     yield _sse_event(ev["content"])
                 elif ev["kind"] == "done":
                     sources = ev["sources"]
-            answer = "".join(collected)
+            answer = _refine_answer(
+                "".join(collected), sources, user_message.content
+            )
             assistant = await run_in_threadpool(
                 message_service.create_message,
                 chat_id=chat_id,
@@ -255,6 +331,12 @@ async def create_agent_answer(
         await run_in_threadpool(_ensure_chat_owned, session, chat_id, current_user.id)
     except ChatNotFoundError:
         raise HTTPException(status_code=404, detail="chat não encontrado") from None
+
+    guard_result = _input_guardrail(payload.content)
+    if not guard_result.allowed:
+        return _guardrail_blocked_response(guard_result)
+    if _consent_required() and not current_user.consent_granted:
+        return _consent_blocked_response()
 
     from einstein_test.services.rag.agent import agent_config, build_agent_graph
 
@@ -347,6 +429,12 @@ async def create_agent_hitl(
         await run_in_threadpool(_ensure_chat_owned, session, chat_id, current_user.id)
     except ChatNotFoundError:
         raise HTTPException(status_code=404, detail="chat não encontrado") from None
+
+    guard_result = _input_guardrail(payload.content)
+    if not guard_result.allowed:
+        raise HTTPException(status_code=422, detail=f"guardrail_blocked: {guard_result.reason}")
+    if _consent_required() and not current_user.consent_granted:
+        raise HTTPException(status_code=403, detail="consent_required")
 
     from einstein_test.services.rag.hitl import build_hitl_graph, hitl_config
 
@@ -498,6 +586,12 @@ async def create_multi_query_answer(
     except ChatNotFoundError:
         raise HTTPException(status_code=404, detail="chat não encontrado") from None
 
+    guard_result = _input_guardrail(payload.content)
+    if not guard_result.allowed:
+        return _guardrail_blocked_response(guard_result)
+    if _consent_required() and not current_user.consent_granted:
+        return _consent_blocked_response()
+
     from einstein_test.services.rag.multiquery import build_multiquery_graph, multi_config
 
     user_model = UserService(UserRepositorySQLAlchemy(session)).resolve_model(current_user)
@@ -565,6 +659,12 @@ async def create_supervisor_answer(
         await run_in_threadpool(_ensure_chat_owned, session, chat_id, current_user.id)
     except ChatNotFoundError:
         raise HTTPException(status_code=404, detail="chat não encontrado") from None
+
+    guard_result = _input_guardrail(payload.content)
+    if not guard_result.allowed:
+        return _guardrail_blocked_response(guard_result)
+    if _consent_required() and not current_user.consent_granted:
+        return _consent_blocked_response()
 
     from einstein_test.services.rag.supervisor import build_supervisor, supervisor_config
 

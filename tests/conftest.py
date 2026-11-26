@@ -24,6 +24,27 @@ def _jwt_secret(monkeypatch):
     monkeypatch.setenv("ALLOWED_MODELS", "azure/gpt-5-mini,azure/gpt-6-luna")
     # observabilidade Langfuse desligada por padrão nos testes (determinístico)
     monkeypatch.setenv("LANGFUSE_ENABLED", "false")
+    # guardrails/refiners/LGPD desligados por padrão nos testes — os testes que
+    # testam essas features os habilitam explicitamente (sem herdar do .env).
+    monkeypatch.setenv("GUARDRAILS_ENABLED", "false")
+    monkeypatch.setenv("REFINERS_ENABLED", "false")
+    monkeypatch.setenv("REQUIRE_CONSENT", "false")
+    monkeypatch.setenv("BLOCKED_TOPICS", "")
+
+
+@pytest.fixture(autouse=True)
+def _reset_settings_cache(monkeypatch):
+    """Limpa o cache de settings após cada teste, DEPOIS do restore do env.
+
+    Depende de `monkeypatch` para que seu teardown rode antes do undo do
+    monkeypatch — assim o cache é esvaziado quando o env já voltou ao valor
+    original, e a próxima `get_settings()` reconstrói com o env correto.
+    """
+    from einstein_test.settings import _build_settings
+
+    _build_settings.cache_clear()
+    yield
+    _build_settings.cache_clear()
 
 
 @pytest.fixture(autouse=True)

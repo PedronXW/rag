@@ -140,6 +140,33 @@ def _sources_from(chunks: list[Any]) -> list[dict]:
     return [chunk_to_dict(c) for c in chunks]
 
 
+_BLOCKED_ANSWER = (
+    "Não posso responder com base nas informações disponíveis."
+)
+
+
+def _refine_answer(answer: str, chunks: list[Any], question: str) -> str:
+    """Aplica output guardrails + refiners à resposta (gated por env).
+
+    Com `GUARDRAILS_ENABLED`/`REFINERS_ENABLED` off (default), retorna a
+    resposta inalterada — determinístico nos testes.
+    """
+    from einstein_test.guardrails.base import GuardAction
+    from einstein_test.guardrails.output_guardrails import build_output_pipeline
+    from einstein_test.refiners.refiners import build_refiner_pipeline
+    from einstein_test.settings import get_settings
+
+    cfg = get_settings()
+    out_guards = build_output_pipeline(enabled=cfg.guardrails_enabled)
+    result = out_guards.run(answer, chunks=chunks, context=chunks)
+    if result.action == GuardAction.block or not result.allowed:
+        return _BLOCKED_ANSWER
+    if result.redacted is not None:
+        answer = result.redacted
+    refiners = build_refiner_pipeline(enabled=cfg.refiners_enabled)
+    return refiners.run(answer, chunks=chunks, question=question)
+
+
 def _compile(
     llm,
     retriever: VectorRepository,
@@ -176,7 +203,7 @@ def _compile(
         for token in llm.stream(messages):
             pieces.append(token)
             writer(token)
-        answer = "".join(pieces)
+        answer = _refine_answer("".join(pieces), chunks, state["question"])
         return {
             "prompt": prompt,
             "answer": answer,
@@ -192,7 +219,7 @@ def _compile(
         async for token in llm.astream(messages):
             pieces.append(token)
             writer(token)
-        answer = "".join(pieces)
+        answer = _refine_answer("".join(pieces), chunks, state["question"])
         return {
             "prompt": prompt,
             "answer": answer,

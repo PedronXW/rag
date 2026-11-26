@@ -48,6 +48,12 @@ class Settings:
     ollama_chat_model: str = "llama3.2"
     llm_max_retries: int = 2
     llm_retry_backoff: float = 1.0
+    # guardrails / refiners (F-061)
+    guardrails_enabled: bool = False
+    refiners_enabled: bool = False
+    blocked_topics: list[str] = field(default_factory=list)
+    # lgpd (F-061)
+    require_consent: bool = False
     # logging
     log_level: str = "INFO"
     # rate limit
@@ -90,6 +96,13 @@ def _env_list(name: str, default: list[str]) -> list[str]:
     return [m.strip() for m in raw.split(",") if m.strip()]
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
 @lru_cache(maxsize=1)
 def _build_settings() -> Settings:
     return Settings(
@@ -107,6 +120,10 @@ def _build_settings() -> Settings:
         ollama_chat_model=_env("OLLAMA_CHAT_MODEL", "llama3.2"),
         llm_max_retries=_env_int("LLM_MAX_RETRIES", 2),
         llm_retry_backoff=_env_float("LLM_RETRY_BACKOFF", 1.0),
+        guardrails_enabled=_env_bool("GUARDRAILS_ENABLED"),
+        refiners_enabled=_env_bool("REFINERS_ENABLED"),
+        blocked_topics=_env_list("BLOCKED_TOPICS", []),
+        require_consent=_env_bool("REQUIRE_CONSENT"),
         log_level=_env("LOG_LEVEL", "INFO"),
         rate_limit_login=_env_int("RATE_LIMIT_LOGIN", 10),
         rate_limit_chats=_env_int("RATE_LIMIT_CHATS", 30),

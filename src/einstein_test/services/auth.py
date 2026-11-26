@@ -1,5 +1,7 @@
 """Serviço de Auth — registro e login."""
 
+from datetime import datetime, timezone
+
 from sqlalchemy.exc import IntegrityError
 
 from einstein_test.models import User
@@ -25,7 +27,7 @@ class AuthService:
     def _normalize_email(email: str) -> str:
         return email.strip().lower()
 
-    def register(self, email: str, password: str) -> User:
+    def register(self, email: str, password: str, consent: bool = False) -> User:
         email = self._normalize_email(email)
         if len(password.encode("utf-8")) > BCRYPT_MAX_BYTES:
             raise InvalidCredentials(
@@ -35,7 +37,10 @@ class AuthService:
             raise EmailAlreadyRegistered(f"email já cadastrado: {email}")
         try:
             return self.repository.create(
-                email=email, password_hash=hash_password(password)
+                email=email,
+                password_hash=hash_password(password),
+                consent_granted=consent,
+                consent_at=datetime.now(timezone.utc) if consent else None,
             )
         except IntegrityError:
             raise EmailAlreadyRegistered(f"email já cadastrado: {email}") from None

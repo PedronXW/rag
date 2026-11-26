@@ -391,6 +391,10 @@ Copie `.env.example` para `.env` e preencha:
 | `LLM_MAX_RETRIES` | `2` | Retries do LLM antes do 1º token |
 | `LLM_RETRY_BACKOFF` | `1` | Backoff do LLM (s) |
 | `ALLOWED_MODELS` | `azure/gpt-5-mini,azure/gpt-6-luna` | Modelos de LLM permitidos por usuário (use prefixo `ollama/` para modelos locais) |
+| `GUARDRAILS_ENABLED` | `false` | Habilita guardrails de entrada/saída do RAG |
+| `REFINERS_ENABLED` | `false` | Habilita refiners de resposta (dedup/citação/PII) |
+| `BLOCKED_TOPICS` | — | Tópicos proibidos (guardrail de política) |
+| `REQUIRE_CONSENT` | `false` | Exige consentimento LGPD antes do RAG |
 | `RATE_LIMIT_*` | vários | Limites por minuto (login, chats, messages, files, users, global) |
 
 ---

@@ -116,6 +116,10 @@ services:
       EMBEDDER: ${EMBEDDER:-openai}
       OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
       ALLOWED_MODELS: ${ALLOWED_MODELS:-azure/gpt-5-mini,azure/gpt-6-luna}
+      GUARDRAILS_ENABLED: ${GUARDRAILS_ENABLED:-false}
+      REFINERS_ENABLED: ${REFINERS_ENABLED:-false}
+      BLOCKED_TOPICS: ${BLOCKED_TOPICS:-}
+      REQUIRE_CONSENT: ${REQUIRE_CONSENT:-false}
     depends_on:
       postgres:
         condition: service_healthy
