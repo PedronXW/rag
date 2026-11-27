@@ -15,9 +15,6 @@ from langgraph.graph import MessagesState, StateGraph
 from einstein_test.vector import Embedder
 from einstein_test.vector.repository import VectorRepository
 
-CHUNKS_PER_FILE = 2
-MAX_CHUNKS = 12
-
 MAX_HISTORY_MESSAGES = 10
 MAX_HISTORY_TOKENS = 4000
 

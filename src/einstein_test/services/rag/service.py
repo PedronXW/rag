@@ -21,9 +21,9 @@ from einstein_test.services.rag.llm import (
     LLM_RETRY_BACKOFF,
     ChatLLM,
     ChatOpenAIAdapter,
-    _is_transient,
     build_chat_llm,
 )
+from einstein_test.services.rag.retrieval import _is_transient
 from einstein_test.vector import Embedder, get_embedder
 from einstein_test.vector.repository import VectorRepository
 

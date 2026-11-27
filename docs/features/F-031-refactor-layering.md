@@ -28,7 +28,7 @@ violação crítica/major/minor da auditoria foi corrigida.
     com geração única (removido default de uuid no model).
 - **Vector/RAG**: `search_similar` não tem mais defaults de domínio
   (`chunks_per_file`/`max_chunks` obrigatórios); a política vive em
-  `services/rag/graph.py` (`CHUNKS_PER_FILE=2`, `MAX_CHUNKS=12`).
+  `services/rag/retrieval.py` (`CHUNKS_PER_FILE=2`, `MAX_CHUNKS=12`, F-061).
 - **Minor**: `repositories/__init__` deixa de re-exportar de `vector/`;
   `repositories/sqlalchemy.py` inclui `UserRepositorySQLAlchemy`; parsing
   `s3://` unificado em `storage.parse_s3_url`; `AuthService.with_session`

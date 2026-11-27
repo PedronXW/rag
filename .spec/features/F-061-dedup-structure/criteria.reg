@@ -1,0 +1,7 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	Existe um pool de conexao Postgres unico (compartilhado por checkpointer e longterm)	T-SPEC
+AC-002	U-002	CHUNKS_PER_FILE/MAX_CHUNKS tem uma unica fonte (retrieval.py); eval/generation.py e eval/cli.py usam retrieve_chunks (sem busca manual/hardcode)	T-SPEC
+AC-003	U-003	managed/multiquery/supervisor usam build_prompt do graph (sem prompts contexto manuais)	T-SPEC
+AC-004	U-002	_is_transient e importado da fonte unica (retrieval.py), sem re-export em cadeia	T-SPEC
+AC-005	U-004	A agregacao de metricas tem fonte unica (EvalReport.aggregates em eval/), apos a remocao dos harnesses orfaos	T-SPEC
+AC-006	U-004	A suite de testes passa (regressao)	T-SPEC

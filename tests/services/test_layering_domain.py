@@ -54,10 +54,11 @@ def test_ac007_search_similar_requires_explicit_params():
 
 
 def test_ac007_graph_is_single_source():
-    import einstein_test.services.rag.graph as graph
+    # fonte única das constantes de retrieval (F-061/AC-002)
+    from einstein_test.services.rag.retrieval import CHUNKS_PER_FILE, MAX_CHUNKS
 
-    assert graph.CHUNKS_PER_FILE == 2
-    assert graph.MAX_CHUNKS == 12
+    assert CHUNKS_PER_FILE == 2
+    assert MAX_CHUNKS == 12
 
 
 def test_ac008_repositories_init_does_not_reimport_vector():

@@ -1,0 +1,3 @@
+#id	tipo	status	texto
+A-001	A	confirmada	pool unico; constantes e retrieve em retrieval.py.
+A-002	A	confirmada	prompts usam build_prompt; aggregate unico em eval/.

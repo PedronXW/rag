@@ -23,6 +23,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from einstein_test.eval.dataset import EvalQuestion, load_dataset
+from einstein_test.services.rag.retrieval import CHUNKS_PER_FILE, MAX_CHUNKS
 from einstein_test.eval.judge import FakeJudge, LLMJudge
 from einstein_test.eval.report import render_report
 from einstein_test.eval.runner import run_eval
@@ -179,7 +180,7 @@ def _real_env(questions: list[EvalQuestion], corpus_dir: Path):
                 retriever = VectorRepositorySQLAlchemy(s)
                 chunks = retriever.search_similar(
                     embedding=embedding, chat_id=chat_id,
-                    chunks_per_file=2, max_chunks=12,
+                    chunks_per_file=CHUNKS_PER_FILE, max_chunks=MAX_CHUNKS,
                 )
             seen: list[int] = []
             for c in chunks or []:

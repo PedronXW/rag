@@ -42,21 +42,10 @@ def reset_memory_store() -> None:
 
 @lru_cache(maxsize=1)
 def _pool():
-    """ConnectionPool psycopg para o PostgresStore (paridade com checkpointer)."""
-    from psycopg_pool import ConnectionPool
-    from sqlalchemy.engine import make_url
+    """ConnectionPool psycopg para o PostgresStore (fonte única: checkpointer)."""
+    from einstein_test.services.rag.checkpointer import _pool as _checkpointer_pool
 
-    from einstein_test.settings import get_settings
-
-    url = make_url(get_settings().database_url)
-    conninfo = url.set(drivername="postgresql").render_as_string(hide_password=False)
-    return ConnectionPool(
-        conninfo=conninfo,
-        open=True,
-        min_size=0,
-        max_size=5,
-        kwargs={"autocommit": True},
-    )
+    return _checkpointer_pool()
 
 
 @lru_cache(maxsize=1)

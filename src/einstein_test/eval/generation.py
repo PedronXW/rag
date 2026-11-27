@@ -5,7 +5,8 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-from einstein_test.services.rag.graph import CHUNKS_PER_FILE, MAX_CHUNKS, build_prompt
+from einstein_test.services.rag.graph import build_prompt
+from einstein_test.services.rag.retrieval import retrieve_chunks
 from einstein_test.services.rag.service import RagService
 from einstein_test.vector import Embedder, VectorRepository
 
@@ -31,14 +32,8 @@ async def run_generation(
 ) -> GenerationResult:
     """Coleta resposta real (rag_service.astream), contexto e perf (TTFT/latência)."""
     history = history or []
-    query_embedding = embedder.embed([question])[0]
-    chunks = retriever.search_similar(
-        embedding=query_embedding,
-        chat_id=chat_id,
-        chunks_per_file=CHUNKS_PER_FILE,
-        max_chunks=MAX_CHUNKS,
-    ) or []
-    context = [c.content for c in chunks]
+    chunks = retrieve_chunks(question, retriever, embedder, chat_id)
+    context = [c["content"] for c in chunks]
     prompt = build_prompt(question, chunks, history)
 
     start = time.perf_counter()

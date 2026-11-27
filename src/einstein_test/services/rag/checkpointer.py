@@ -29,7 +29,7 @@ def _pool() -> ConnectionPool:
     return ConnectionPool(
         conninfo=_conninfo(),
         open=True,
-        min_size=1,
+        min_size=0,
         max_size=5,
         kwargs={"autocommit": True},
     )

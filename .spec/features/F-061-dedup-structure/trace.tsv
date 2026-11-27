@@ -1,0 +1,7 @@
+#AC-id	comando-teste	T-id	status	sha	strict
+AC-001	uv run pytest tests/services/test_rag_dedup_structure.py -q -k 'pool'	T-SPEC	proven	37d4c73	0
+AC-002	uv run pytest tests/services/test_rag_dedup_structure.py -q -k 'constantes or eval_generation'	T-SPEC	proven	37d4c73	0
+AC-003	uv run pytest tests/services/test_rag_dedup_structure.py -q -k 'managed_usa'	T-SPEC	proven	37d4c73	0
+AC-004	uv run pytest tests/services/test_rag_dedup_structure.py -q -k 'is_transient'	T-SPEC	proven	37d4c73	0
+AC-005	uv run pytest tests/services/test_rag_dedup_structure.py -q -k 'aggregate'	T-SPEC	proven	37d4c73	0
+AC-006	uv run pytest tests/services/test_rag_dedup_structure.py -q	T-SPEC	proven	37d4c73	0
