@@ -1,0 +1,3 @@
+#id	tipo	status	texto
+A-001	A	confirmada	todos os configs usam graph_config; thread_config removido.
+A-002	A	confirmada	modelo com fonte unica em settings.

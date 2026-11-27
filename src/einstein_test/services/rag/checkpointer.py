@@ -53,8 +53,10 @@ def build_async_postgres_checkpointer() -> AsyncPostgresSaver:
 
 
 def thread_config(chat_id: int) -> dict:
-    """Config do graph com thread_id = chat_id (memória por chat)."""
-    return {"configurable": {"thread_id": str(chat_id)}}
+    """Config do graph com thread_id = chat_id + callbacks (delega ao graph_config)."""
+    from einstein_test.services.rag.callbacks import graph_config
+
+    return graph_config(chat_id=chat_id)
 
 
 __all__ = [

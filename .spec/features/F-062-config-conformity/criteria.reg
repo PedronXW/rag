@@ -1,0 +1,6 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	Todos os *_config dos graphs (agent, supervisor, multi, hitl) usam graph_config (com callbacks quando habilitado)	T-SPEC
+AC-002	U-002	checkpointer.thread_config e removido ou delega ao graph_config	T-SPEC
+AC-003	U-001	Com Langfuse habilitado, os configs incluem callbacks; desabilitado, nao incluem (deterministico)	T-SPEC
+AC-004	U-003	A configuracao de modelo tem fonte unica (settings) consumida pelos adapters/llm	T-SPEC
+AC-005	U-003	A suite de testes passa (regressao)	T-SPEC
