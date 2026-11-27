@@ -1,0 +1,7 @@
+#AC-id	U-id	descricao	T-id
+AC-001	U-001	services/rag/evaluation.py e removido (sem caller em src)	T-SPEC
+AC-002	U-001	services/rag/ragas_eval.py e removido (avaliacao via Langfuse)	T-SPEC
+AC-003	U-001	services/rag/react.py, rich_stream.py e streaming.py sao removidos	T-SPEC
+AC-004	U-002	build_graph/build_graph_async saem do __init__.py; os re-exports da feature Ollama (ChatOllamaAdapter, build_chat_llm, is_ollama_model) e de config sao mantidos	T-SPEC
+AC-005	U-003	mcp/ continua funcional; a avaliacao via Langfuse continua	T-SPEC
+AC-006	U-003	A suite de testes passa (regressao) com os testes dos modulos removidos tambem removidos	T-SPEC

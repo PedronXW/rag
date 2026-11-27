@@ -49,42 +49,6 @@ class _Emb:
         return [[0.1] * 8 for _ in texts]
 
 
-def test_harness_calcula_metricas():
-    """AC-003: o harness calcula relevance, fidelity e accuracy."""
-    from einstein_test.services.rag.evaluation import evaluate_rag
-
-    results = evaluate_rag(
-        [{"question": "q", "expected": "resposta", "chunk_ids": []}],
-        llm=_FakeLLM(),
-        retriever=_Ret(),
-        embedder=_Emb(),
-    )
-    assert results[0]["relevance"] in (0.0, 1.0)
-    assert results[0]["fidelity"] in (0.0, 1.0)
-    assert results[0]["accuracy"] in (0.0, 1.0)
-
-
-def test_harness_usado_com_stubs():
-    """AC-004: o harness roda com stubs (sem LLM real)."""
-    from einstein_test.services.rag.evaluation import evaluate_rag
-
-    results = evaluate_rag(
-        [{"question": "q", "expected": "resposta", "chunk_ids": []}],
-        llm=_FakeLLM(),
-        retriever=_Ret(),
-        embedder=_Emb(),
-    )
-    assert isinstance(results, list)
-    assert len(results) == 1
-
-
-def test_harness_cli_exit():
-    """AC-005: o harness é executável via CLI (exit 0 no limiar)."""
-    from einstein_test.services.rag.evaluation import main
-
-    rc = main(["--cases", "1", "--min", "0.0"])
-    assert rc == 0
-
 def test_retry_integrado_ao_graph():
     """AC-001/002: o retrieve do graph absorve falha transiente via retry."""
     from langchain_core.messages import HumanMessage

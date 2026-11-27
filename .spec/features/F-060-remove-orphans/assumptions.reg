@@ -1,0 +1,4 @@
+#id	tipo	status	texto
+A-001	A	confirmada	Remover modulos orfaos de services/rag.
+A-002	A	confirmada	Manter mcp/ e avaliacao via Langfuse.
+A-003	A	confirmada	hooks de teste mantidos; sem remocao de set/reset_memory_store.

@@ -4,8 +4,8 @@
 - `graph.py`: grafo LangGraph (sync/async) sem duplicação.
 - `service.py`: `RagService` + factory.
 
-Este módulo re-exporta a API pública mantida (compatibilidade com callers e
-testes que importam `from einstein_test.services.rag import ...`).
+Este módulo re-exporta a API pública usada por callers e testes
+(`from einstein_test.services.rag import ...`).
 """
 
 from einstein_test.services.rag.llm import (
@@ -18,11 +18,6 @@ from einstein_test.services.rag.llm import (
     allowed_models,
     build_chat_llm,
     is_ollama_model,
-)
-from einstein_test.services.rag.graph import (
-    build_graph,
-    build_graph_async,
-    build_prompt,
 )
 from einstein_test.services.rag.service import (
     RagService,
@@ -39,9 +34,6 @@ __all__ = [
     "build_chat_llm",
     "is_ollama_model",
     "RagService",
-    "build_graph",
-    "build_graph_async",
-    "build_prompt",
     "get_rag_service",
     "set_rag_factory",
     "reset_rag_factory",

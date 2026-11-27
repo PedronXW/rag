@@ -21,20 +21,15 @@ def test_managed_usado_no_fluxo():
     assert callable(managed.build_graph_with_memory_store)
 
 
-def test_react_documentado():
-    """AC-003: react.py tem docstring explicitando que é ferramenta/alternativa."""
-    from einstein_test.services.rag import react
+def test_react_e_ragas_removidos():
+    """AC-003: react e ragas_eval foram removidos (avaliação via Langfuse)."""
+    import importlib
 
-    assert inspect.getdoc(react)  # docstring do módulo
-    assert "create_agent" in inspect.getdoc(react) or "create_react_agent" in inspect.getdoc(react)
+    import pytest
 
-
-def test_ragas_eval_documentado():
-    """AC-003: ragas_eval tem docstring/documentação."""
-    from einstein_test.services.rag import ragas_eval
-
-    assert inspect.getdoc(ragas_eval)  # docstring do módulo
-    assert "RAGAS" in inspect.getdoc(ragas_eval) or "LLM-as-judge" in inspect.getdoc(ragas_eval)
+    for mod in ("react", "ragas_eval"):
+        with pytest.raises(ImportError):
+            importlib.import_module(f"einstein_test.services.rag.{mod}")
 
 
 def test_memoria_long_a_continua():

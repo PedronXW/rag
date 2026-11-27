@@ -26,8 +26,7 @@ def test_ac002_public_reexports_present():
     import einstein_test.services.rag as rag
 
     expected = [
-        "ChatLLM", "FakeChatLLM", "ChatOpenAIAdapter", "RagService",
-        "build_graph", "build_graph_async", "build_prompt",
+        "ChatLLM", "FakeChatLLM", "RagService",
         "get_rag_service", "set_rag_factory", "reset_rag_factory",
         "allowed_models",
     ]

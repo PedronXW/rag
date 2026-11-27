@@ -252,23 +252,9 @@ def build_graph_with_state(
     return _compile(llm, retriever, embedder, async_=async_, checkpointer=checkpointer)
 
 
-def build_graph(llm, retriever: VectorRepository, embedder: Embedder) -> Any:
-    """Monta o StateGraph SÍNCRONO (compat com RagService.stream)."""
-    return compile_rag_graph(llm, retriever, embedder, async_=False)
-
-
-def build_graph_async(
-    llm, retriever: VectorRepository, embedder: Embedder
-) -> Any:
-    """Monta o StateGraph ASSÍNCRONO (usado por RagService.astream)."""
-    return compile_rag_graph(llm, retriever, embedder, async_=True)
-
-
 __all__ = [
     "RagState",
     "build_prompt",
     "compile_rag_graph",
-    "build_graph",
-    "build_graph_async",
     "build_graph_with_state",
 ]

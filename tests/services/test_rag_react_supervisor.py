@@ -49,19 +49,19 @@ class _Emb:
         return [[0.1] * 8 for _ in texts]
 
 
-def test_react_agent_compila():
-    """AC-001: build_react_agent existe e usa create_react_agent (pre-built)."""
-    from einstein_test.services.rag.react import build_react_agent, react_config
+def test_supervisor_roda():
+    """AC-002/003: o supervisor roteia para sub-agentes e consolida."""
+    from einstein_test.services.rag.supervisor import build_supervisor
 
-    # a factory é construível e expõe a API (Runnable real em produção via ChatOpenAIAdapter)
-    assert callable(build_react_agent)
-    cfg = react_config(chat_id=1)
-    assert cfg["configurable"]["thread_id"] == "react:1"
-    # o módulo referencia create_react_agent do langgraph-prebuilt
-    import inspect
-
-    src = inspect.getsource(build_react_agent)
-    assert "create_react_agent" in src
+    sup = build_supervisor(
+        llm=_ToolLLM(),
+        retriever=_Ret(),
+        embedder=_Emb(),
+        chat_id=1,
+    )
+    out = sup.invoke({"question": "pergunta", "chat_id": 1})
+    assert out.get("answer")
+    assert out.get("agents_used")
 
 
 def test_supervisor_roda():

@@ -1,0 +1,7 @@
+#AC-id	comando-teste	T-id	status	sha	strict
+AC-001	uv run pytest tests/services/test_rag_remove_orphans.py -q -k 'orfaos_removidos or nao_hay or modulos_orfaos'	T-SPEC	proven	d0dc0a0	0
+AC-002	uv run pytest tests/services/test_rag_remove_orphans.py -q -k 'orfaos_removidos or nao_hay'	T-SPEC	proven	d0dc0a0	0
+AC-003	uv run pytest tests/services/test_rag_remove_orphans.py -q -k 'modulos_orfaos or nao_hay'	T-SPEC	proven	d0dc0a0	0
+AC-004	uv run pytest tests/services/test_rag_remove_orphans.py -q -k 'init_imports'	T-SPEC	proven	d0dc0a0	0
+AC-005	uv run pytest tests/services/test_rag_remove_orphans.py -q -k 'mcp_continua or eval_langfuse'	T-SPEC	proven	d0dc0a0	0
+AC-006	uv run pytest tests/services/test_rag_remove_orphans.py -q	T-SPEC	proven	d0dc0a0	0
